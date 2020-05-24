@@ -16,6 +16,7 @@ Since our work is mainly benchmark, we need to restrict several assumptions for 
 3. All the methods implemented should provide similar level of performance, i.e. FAR and FRR. 
 4. We want to share a 128-bit key.
 5. All the methods work on a TX and a RX. The TX could be IMD or programmer, depending on actual constrains and performance, such as energy consumption.
+6. We should simulate the same error influence (both PS signal difference and transmission channel error) happening on different methods.
 
 ### Methods Chosen
 
