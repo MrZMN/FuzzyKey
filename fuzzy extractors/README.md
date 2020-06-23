@@ -9,7 +9,7 @@ Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't aim to c
 The main protocol could be described briefly:
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously. Some fuzzy extractors need PS in bit string form, while others just need the set format.
 - TX does some operations to conceal the PS values (some methods like ECC needed).
-- TX transmits the concealed PS and a random string to RX over the wireless channel. This channel includes air and human tissue, which might cause error. 
+- TX transmits the concealed PS and a random string to RX over the wireless channel. 
 - RX receives the info. It provides PS' and does some operations to recover PS' = PS.
 - RX uses a strong random extractor (a SHA-256 could be used) to generate a uniformly distributed key. PS and random string are the inputs of the extractor.
 
