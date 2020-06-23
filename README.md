@@ -32,7 +32,7 @@ Till now, these methods have been well accepted by the security community:
 - fuzzy commitment
 - fuzzy extractor: code-offset construction 
 - fuzzy extractor: syndrome construction
-2. Based on PS in set format (for example, use IPI time directly)
+2. Based on PS in set format (for example, use IPI time as set element directly)
 - fuzzy vault
 - fuzzy extractor: improved fuzzy vault
 - fuzzy extractor: PinSketch
