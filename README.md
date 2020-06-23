@@ -41,8 +41,7 @@ Most of these methods are based on ECC (Error-correction Codes). The ECC used:
 1. binary BCH code
 2. Reed-Solomon code
 
-
-
+Note: Because many methods rely on ECC codes, it'll also be a research area to test which ECC settings perform better. For example, different ECC types may have different effects, such as: RS works well in burst error naturally. Besides, for block codes, larger block size may result in more memory consumption, but may require less energy consumption. The choice of different block sizes may affect. 
 
 
 
