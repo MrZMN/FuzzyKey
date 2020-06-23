@@ -22,7 +22,6 @@ Based on the paper 'A Fuzzy Commitment Scheme' by Juels & Wattenberg
 - In the above implementation, errors on wireless channel wasn't concerned. 
 
 ### Security level
-The security depends on two parts:
 
 
 
