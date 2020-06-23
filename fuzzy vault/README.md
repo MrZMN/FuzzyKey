@@ -21,6 +21,10 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 
 - Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX
 
+### Details
+
+In the above implementation, errors on wireless channel wasn't concerned.
+
 ### Adjustments Needed for Embedded Systems
 
 According to the current codes, for each point (x,y), x is an int value (4 bytes in C) and y is a double value (8 bytes). This means each point corresponds to 12 bytes. Considering there'll be thousands of points to be sent/received for security concern, it's impossible for a 2KB memory embedded system to generate/send the points in one time. It's feasible to do this in batches, namely, TX generates and sends hundreds of points at a time for several times, and the same for RX.
