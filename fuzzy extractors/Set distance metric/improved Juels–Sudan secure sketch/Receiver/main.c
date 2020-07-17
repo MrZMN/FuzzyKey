@@ -1,185 +1,439 @@
-#include <string.h>
 #include <time.h>
 #include <stdlib.h>
-#include <tgmath.h>
-#include "solequations.h"
-#include "lagrangeinterpolation.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 
-#define setsize 10		//PS value set size s of fuzzy extractor 
-#define errtolerant 4 	//error tolerance t of fuzzy extractor, which stands for symetric difference size (2 * num of sets mismatches), must be even number 
-#define numerr 2
-#define numcomb 45
+#define numofps 10      //num of ps measurements (s in the fuzzy extractor paper)
+#define t 2             //error tolerance (t in the fuzzy extractor paper), which stands for max set difference size between TX/RX, must be even number 
+#define n 255           //n = 2^m-1
 
-void projectpoints(int size, int errnum, long double set[], long double points[][2], long double poly[]);
-long double mulfortimes(long double num, int times);
-void comb(int* arr, int start, int* result, int count, const int NUM, const int arr_len, long double* realarr, long double psvalues[][4], int* ctr);
-void findmistake(int size, int num, long double* set, long double psvalues[][4]);
+//define the operations for sha-256  
+#define SHFR(x, times) (((x) >> (times)))
+#define ROTR(x, times) (((x) >> (times)) | ((x) << ((sizeof(x) << 3) - (times))))
+#define ROTL(x, times) (((x) << (times)) | ((x) >> ((sizeof(x) << 3) - (times))))
+#define CHX(x, y, z) (((x) &  (y)) ^ (~(x) & (z)))
+#define MAJ(x, y, z) (((x) &  (y)) ^ ( (x) & (z)) ^ ((y) & (z)))
+#define BSIG0(x) (ROTR(x,  2) ^ ROTR(x, 13) ^ ROTR(x, 22))
+#define BSIG1(x) (ROTR(x,  6) ^ ROTR(x, 11) ^ ROTR(x, 25))
+#define SSIG0(x) (ROTR(x,  7) ^ ROTR(x, 18) ^ SHFR(x,  3))
+#define SSIG1(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ SHFR(x, 10))
+#define SHA256_BLOCK_SIZE (512/8)
+#define SHA256_COVER_SIZE (SHA256_BLOCK_SIZE*2)
 
+static uint32_t inisett[64] = {
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+};
+
+//GF(2^8)
+//poly form
+int alpha_to[n+1] = {1, 2, 4, 8, 16, 32, 64, 128, 113, 226, 181, 27, 54, 108, 216, 193, 243, 151, 95, 190, 13, 26, 52, 104, 208, 209, 211, 215, 223, 207, 239, 175, 47, 94, 188, 9, 18, 36, 72, 144, 81, 162, 53, 106, 212, 217, 195, 247, 159, 79, 158, 77, 154, 69, 138, 101, 202, 229, 187, 7, 14, 28, 56, 112, 224, 177, 19, 38, 76, 152, 65, 130, 117, 234, 165, 59, 118, 236, 169, 35, 70, 140, 105, 210, 213, 219, 199, 255, 143, 111, 222, 205, 235, 167, 63, 126, 252, 137, 99, 198, 253, 139, 103, 206, 237, 171, 39, 78, 156, 73, 146, 85, 170, 37, 74, 148, 89, 178, 21, 42, 84, 168, 33, 66, 132, 121, 242, 149, 91, 182, 29, 58, 116, 232, 161, 51, 102, 204, 233, 163, 55, 110, 220, 201, 227, 183, 31, 62, 124, 248, 129, 115, 230, 189, 11, 22, 44, 88, 176, 17, 34, 68, 136, 97, 194, 245, 155, 71, 142, 109, 218, 197, 251, 135, 127, 254, 141, 107, 214, 221, 203, 231, 191, 15, 30, 60, 120, 240, 145, 83, 166, 61, 122, 244, 153, 67, 134, 125, 250, 133, 123, 246, 157, 75, 150, 93, 186, 5, 10, 20, 40, 80, 160, 49, 98, 196, 249, 131, 119, 238, 173, 43, 86, 172, 41, 82, 164, 57, 114, 228, 185, 3, 6, 12, 24, 48, 96, 192, 241, 147, 87, 174, 45, 90, 180, 25, 50, 100, 200, 225, 179, 23, 46, 92, 184, 0};
+//index form
+int index_of[n+1] = {-1, 0, 1, 231, 2, 207, 232, 59, 3, 35, 208, 154, 233, 20, 60, 183, 4, 159, 36, 66, 209, 118, 155, 251, 234, 245, 21, 11, 61, 130, 184, 146, 5, 122, 160, 79, 37, 113, 67, 106, 210, 224, 119, 221, 156, 242, 252, 32, 235, 213, 246, 135, 22, 42, 12, 140, 62, 227, 131, 75, 185, 191, 147, 94, 6, 70, 123, 195, 161, 53, 80, 167, 38, 109, 114, 203, 68, 51, 107, 49, 211, 40, 225, 189, 120, 111, 222, 240, 157, 116, 243, 128, 253, 205, 33, 18, 236, 163, 214, 98, 247, 55, 136, 102, 23, 82, 43, 177, 13, 169, 141, 89, 63, 8, 228, 151, 132, 72, 76, 218, 186, 125, 192, 200, 148, 197, 95, 174, 7, 150, 71, 217, 124, 199, 196, 173, 162, 97, 54, 101, 81, 176, 168, 88, 39, 188, 110, 239, 115, 127, 204, 17, 69, 194, 52, 166, 108, 202, 50, 48, 212, 134, 41, 139, 226, 74, 190, 93, 121, 78, 112, 105, 223, 220, 241, 31, 158, 65, 117, 250, 244, 10, 129, 145, 254, 230, 206, 58, 34, 153, 19, 182, 237, 15, 164, 46, 215, 171, 99, 86, 248, 143, 56, 180, 137, 91, 103, 29, 24, 25, 83, 26, 44, 84, 178, 27, 14, 45, 170, 85, 142, 179, 90, 28, 64, 249, 9, 144, 229, 57, 152, 181, 133, 138, 73, 92, 77, 104, 219, 30, 187, 238, 126, 16, 193, 165, 201, 47, 149, 216, 198, 172, 96, 100, 175, 87};
+int tolerantflag = 1;   //show if there're mismatches
+
+int projectpoints(int, int, int, int []);
+void guass_elimination(int *[], int, int);
+void exchange_row(int *[], int, int);
+void solve_equation(int [], int *[], int, int);
+void poly_division(int [], int [], int, int, int []);
+void bubble_sort(uint8_t [], int);
+void transform(const uint8_t *, uint32_t *);
+void sha256(const uint8_t *, uint32_t, uint32_t *);
+
+void BerlekampWelch(uint8_t [], int []);
+
+//The RX of Improved Juels-Sudan sketch
+//the only info received from TX side is ss[]
 int main(){
 
-	srand((unsigned)time(NULL));	//For random number generation
-	register int i;
-	long double errvals[numerr];	///for test only///
-	int lasterr = -1;
+    register int i, j, k, index = 0;
+    
+    uint8_t wholeps[2*numofps] = {42, 34, 198, 241, 144, 49, 98, 237, 140, 205, 182, 39, 80, 120, 141, 232, 97, 199, 10, 31};
+    //add some errors
+    wholeps[0] ^= 1;
+    // wholeps[10] ^= 1;
+    wholeps[11] ^= 1;
 
-	long double setB[setsize] = {3.059000, 7.847000, 9.666000, 9.268000, 6.992000, 7.155000, 6.616000, 9.498000, 7.876000, 7.014000};	//setB[] stores the PS values measured by the RX
-	// add some errors in the measured PS values -- for test only --
-    for(i = 0; i < numerr; i++){
-    	int errloc = rand()%setsize;
-    	if(i == 0){
-    		lasterr = errloc;
-    	}else{
-    		while(errloc == lasterr){
-    			errloc = rand()%setsize;
-    		}
-    	}	
-    	printf("modified PS value: %Lf\n", setB[errloc] = rand()%10000/1000.0); 	
-    	errvals[i] =  setB[errloc];
+    uint8_t wholess[2*t] = {254, 72, 195, 248};
+    uint8_t randStr[2*numofps] = {43, 2, 191, 176, 51, 128, 227, 3, 133, 49, 208, 156, 149, 171, 93, 190, 85, 15, 87, 134};
+    uint8_t ps[numofps];    //ps[] stores the PS values measured by the RX - poly form
+    int ss[t];                                   //ss[] stores the secure sketch received from TX, used to construct poly phigh(x)
+    uint32_t key[8];            //the final key
+
+    //divide the computation into 2 pieces because of device limitation
+    for(k = 0; k < 2; k++){
+
+      for(i = 0; i < numofps; i++){
+        ps[i] = wholeps[k*numofps+i];
+      }
+      for(i = 0; i < t; i++){
+        ss[i] = wholess[k*t+i];
+      }
+
+      BerlekampWelch(ps, ss);
+
+      for(i = 0; i < numofps; i++){
+        wholeps[index] = ps[i];
+        index++;
+      }
+
     }
 
-	long double ss[errtolerant] = {-74.991000, 2514.048345, -49589.673059, 636900.638241}; //ss[] stores the secure sketch received from TX, used to construct phigh(x)
-	long double points[setsize][2];                                                    //points[][2] stores the points generated by projecting setB values on phigh(x)
-	long double Ab_matrix[setsize][setsize+1];                                         //Ab_matrix[][] stores the augmented matrix in B-W algorithm
-	long double *Ab[setsize];                                                          //Ab is a pointer array - used to accelarate computation
+    //sort the array
+    bubble_sort(wholeps, 2*numofps);
 
-	//evaluate the points by projecting setB values on phigh(x). The points are stored in points[][]
-    projectpoints(setsize, errtolerant, setB, points, ss);
-
-    //Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 'setsize' num of points, succeed if at least (s-t/2) points are legit
-    //generate the augmented matrix (size: setsize*(setsize+1))
-    for(i = 0; i < setsize; i++){
-    	Ab_matrix[i][0] = mulfortimes(points[i][0], 7);
-    	Ab_matrix[i][1] = mulfortimes(points[i][0], 6);
-    	Ab_matrix[i][2] = mulfortimes(points[i][0], 5);
-    	Ab_matrix[i][3] = mulfortimes(points[i][0], 4);
-    	Ab_matrix[i][4] = mulfortimes(points[i][0], 3);
-    	Ab_matrix[i][5] = mulfortimes(points[i][0], 2);
-    	Ab_matrix[i][6] = mulfortimes(points[i][0], 1);
-    	Ab_matrix[i][7] = mulfortimes(points[i][0], 0);
-    	Ab_matrix[i][8] = points[i][0]*points[i][1];
-    	Ab_matrix[i][9] = -points[i][1];
-    	Ab_matrix[i][10] = mulfortimes(points[i][0], 2)*points[i][1];
+    //ps values xor random string
+    for(i = 0; i < 2*numofps; i++){
+        wholeps[i] ^= randStr[i];
     }
-    //convert the 2D augmented array into 1D pointer array format, to accelerate computation
-	for(i=0;i<setsize;i++){
-  		Ab[i] = Ab_matrix[i];
-	}
-	//Elementary row transformation to solve the solutions of equations
-	guass_elimination(Ab, setsize, setsize+1);
 
-    //find the wrong PS measurements
-	long double psvalues[numcomb][4];	
-	findmistake(setsize, 2, setB, psvalues);
-	long double faultps1;
-	long double faultps2; 
-	long double min = 10000.0;
-	for(i = 0; i < numcomb; i++){
-		psvalues[i][3] = fabs((psvalues[i][3]*(*(Ab[setsize-2]+(setsize-2))) + psvalues[i][2]*(*(Ab[setsize-2]+(setsize-1)))) - *(Ab[setsize-2]+(setsize)));
-		psvalues[i][2] = fabs(psvalues[i][2]*(*(Ab[setsize-1]+(setsize-1))) - *(Ab[setsize-1]+(setsize)));
+    //generate the key
+    sha256(wholeps, 2*numofps, key);
 
-		if(min > (psvalues[i][3] + psvalues[i][2])){
-			faultps1 = psvalues[i][0];
-			faultps2 = psvalues[i][1];
-			min = psvalues[i][3] + psvalues[i][2];
-		}
-	}
-	printf("These PS measurements got wrong: %Lf, %Lf\n", faultps1, faultps2);
-	
-
-    //get the legit points to reconstruct plow(x) -----this will cause precision loss------
-	long double rightpoints[setsize-errtolerant][2];
-	int ctr3 = 0;
-	for(i = 0; i < setsize; i++){
-		if((points[i][0]!=faultps1)&&(points[i][0]!=faultps2)&&(ctr3<(setsize-errtolerant))){
-			rightpoints[ctr3][0] = points[i][0];
-			rightpoints[ctr3][1] = points[i][1];
-			// printf("%Lf, %Lf\n", rightpoints[ctr3][0], rightpoints[ctr3][1]);
-			ctr3++;
-		}
-	}
-	//Lagrange Interpolation 
-    lagrange(rightpoints, setsize-errtolerant);
-
-    printf("The key is:");
-    for(i = 0; i < polydegree+1; i++){
-        printf("%d ", (int)(fabs(key[i])+0.5));
+    //take the first 128 bits of sha-256 output as the key
+    printf("The final key\n");
+    for(i = 0; i < 4; i++){
+        printf("%x", key[i]);
     }
-    printf("\n");
-
-////Till now, we could do: 1. find out the wrong PS measurements at RX side, if the number of wrong measurements are within the error tolerance threshold. 
-////2. For TX and RX, generate some common values (not strictly proved to be secure). Otherwise, RX could send the index of wrong values to TX to agree on their shared PS values. 
-////The problem is: Because we use decimals representing the PS measurements~ it will cause precision loss, which makes we can't implement the last step proposed by the paper
-////Maybe using GF() field instead of decimals could solve this - put it later   
 
 }
 
-//generate points on a poly (phigh(x) in the fuzzy extractor paper)
-void projectpoints(int size, int errnum, long double set[], long double points[][2], long double poly[]){
-	int i, j;
-	for(i = 0; i < size; i++){
-		points[i][0] = set[i];
-		points[i][1] = mulfortimes(set[i], size);
-		for(j = 0; j < errnum; j++){
-			points[i][1] += poly[j]*mulfortimes(set[i], size-j-1);
-		}
-	}
+void BerlekampWelch(uint8_t ps[], int ss[]){
+  register int i, j;
+  int points[numofps][2];                                           //points[][2] stores the points generated by projecting ps values on phigh(x)
+  int Ab_matrix[numofps][numofps+1];                                //Ab_matrix[][] stores the augmented matrix used in B-W algorithm
+  int *Ab[numofps];                                                 //Ab is a pointer array - used to accelarate computation
+
+  //evaluate the points by projecting ps values on phigh(x). The points are stored in points[][]
+  for(i = 0; i < numofps; i++){
+      points[i][0] = ps[i];
+      points[i][1] = projectpoints(numofps, t, points[i][0], ss);
+  }
+
+  //Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 'numofps' num of points, succeed if at least (s-t/2) points are legit
+  //generate the augmented matrix - this requires modification for diff settings
+  for(i = 0; i < numofps; i++){ 
+    for(j = 0; j < numofps-t/2; j++){
+      Ab_matrix[i][j] = (points[i][0] * (numofps-t/2-1-j)) % n;
+    }
+    if(points[i][1] == -1){
+      Ab_matrix[i][9] = -1;     //e1
+      Ab_matrix[i][10] = -1;
+    }else{
+      Ab_matrix[i][9] = points[i][1];                           //e1
+      Ab_matrix[i][10] = (points[i][0] + points[i][1]) % n;
+    }
+  }
+  //convert the 2D augmented array into 1D pointer array format, to accelerate computation
+  for(i=0;i<numofps;i++){
+      Ab[i] = Ab_matrix[i];
+  }
+  
+  //Elementary row transformation to solve the solutions of equations
+  guass_elimination(Ab, numofps, numofps+1);
+  int solution[numofps];
+  solve_equation(solution, Ab, numofps, numofps+1);
+
+  //The solutions of the equations consist of 2 polys: assume they are A[] and B[]
+  int A[numofps - t/2], B[numofps - t/2];
+  for(i = 0; i < numofps - t/2; i++){
+    A[i] = solution[i];
+    if(i < numofps - t -1){
+      B[i] = -1;
+    }else if(i == numofps - t -1){
+      B[i] = 0;
+    }else{
+      B[i] = solution[i + t/2];
+    }
+  }
+
+  //The poly plow(x) (in fuzzy extractor paper) is the division of A[]/B
+  int plow[numofps - t]; 
+  for(i = 0; i < numofps - t; i++){
+    plow[i] = -1;
+  }
+  poly_division(A, B, numofps - t/2, t/2 + 1, plow);
+
+  if(tolerantflag){
+    //Find the roots of p(x) = phigh(x) + plow(x), which are the PS values at the TX side
+    int px[numofps];
+    uint8_t roots[numofps]; 
+ 
+    for(i = 0; i < t; i++){
+      px[i] = ss[i]; 
+    }
+    for(i = t; i < numofps; i++){
+      px[i] = plow[i - t];
+    }
+
+    int idx = 0, result = 0;
+    for(i = 0; i < n; i++){   //test all posibilities on GF(2^m)
+      result = projectpoints(numofps+1, numofps, i, px);
+      if(result == -1){
+        roots[idx] = i;
+        idx++;
+      }
+    }
+
+    for(i = 0; i < numofps; i++){
+      ps[i] = roots[i];
+    }
+
+  }else{
+    printf("Too many errors, out of the tolerance interval\n");
+  }
 }
 
-//this function calculates the product of num*num*... for times time
-long double mulfortimes(long double num, int times){
-	if(times == 0){
-		return 1.0;
-	}else{
-		int i;
-		long double result = num;
-		for(i = 1; i<times; i++){
-			result = result * num;
-		}
-		return result;
-	}
-}
 
-//this fuction does the relevant combination & product calculation 
-//psvalues[][4]: 1st and 2nd cols store the two ps value pairs; 3rd col stores the product value; 4th col stores the addition value 
-void comb(int* arr, int start, int* result, int count, const int NUM, const int arr_len, long double* realarr, long double psvalues[][4], int* ctr)
-{
-    int i = 0;
-    for (i = start; i < arr_len + 1 - count; i++)
-    {
-        result[count - 1] = i;
-        if (count - 1 == 0)
-        {
-            int j;
-            long double product = 1.0;
-            long double add = 0.0;
-            int ctr2 = 0;
-            for (j = NUM - 1; j >= 0; j--){
-                product *= realarr[arr[result[j]]];
-                add += realarr[arr[result[j]]];
-                psvalues[*ctr][ctr2] = realarr[arr[result[j]]];
-                ctr2 += 1;
+//project x -> y on the poly[] 
+int projectpoints(int size, int numcoeff, int x, int poly[]){
+    unsigned int i;
+    int y = -1;
+
+    if(x != -1){
+        y = (x * size) % n;
+        for(i = 0; i < numcoeff; i++){
+            if(y == -1){
+                y = (poly[i] + (x * (size-i-1))) % n;
+            }else{
+                y = index_of[alpha_to[y] ^ alpha_to[(poly[i] + (x * (size-i-1))) % n]];
             }
+        }
+    }
+    return y;
+}
 
-           	psvalues[*ctr][2] = product;
-           	psvalues[*ctr][3] = add;
-            *ctr += 1;
-        }else
-            comb(arr, i + 1, result, count - 1, NUM, arr_len, realarr, psvalues, ctr);
+void guass_elimination(int *matrix[], int row, int col){
+  int i, j, k;
+  int div;
+
+  for(i = 0; i < row-1; i++){   //do from first row to second last row 
+    if(*(matrix[i]+i) == -1){
+      exchange_row(matrix, i, row);    
+    } 
+    if(*(matrix[i]+i) == -1){   //after changing the rows, for row i, if the row-th value is still 0, skip this turn
+      continue;
+    }
+
+    for(j = i+1; j < row; j++){ //do from row+1 to the bottom   
+        if(*(matrix[j]+i) == -1){
+          div = -1;
+        }else{
+          div = (*(matrix[j]+i) + (n - *(matrix[i]+i))) % n;  //div is in index form
+        }
+
+      if(div != -1){
+        for(k = i; k < col; k++){ //do elementry row transformation on each column
+          if(*(matrix[i]+k) != -1){
+            if(*(matrix[j]+k) == -1){
+              *(matrix[j]+k) = (div + *(matrix[i]+k)) % n;
+            }else{
+              *(matrix[j]+k) = index_of[alpha_to[*(matrix[j]+k)] ^ alpha_to[(div + *(matrix[i]+k)) % n]];   //make sure for each row behind, their row-th element is reduced to 0
+            }
+          }
+        }
+      }
+    }
+  }
+  
+}
+
+//put the row (whose |flag-th value| is not 0) to the top
+void exchange_row(int *matrix[], int flag, int row){
+  int i;
+  int *temp;
+
+  for(i = flag+1; i < row; i++){  //check the rows from row flag+1 to the bottom
+    if(*(matrix[i]+flag) != -1){
+      temp = matrix[flag];
+      matrix[flag] = matrix[i];
+      matrix[i] = temp;
+    }
+  }
+}
+
+void solve_equation(int solutions[], int *matrix[], int row, int col){
+  int i, j;
+  for(i = row-1; i >= 0; i--){
+    for(j = col-2; j > i; j--){
+      if(*(matrix[i]+j) != -1 && solutions[j] != -1){
+        if(*(matrix[i]+col-1) == -1){
+          *(matrix[i]+col-1) = index_of[alpha_to[(*(matrix[i]+j) + solutions[j]) % n]];
+        }else{
+            *(matrix[i]+col-1) = index_of[alpha_to[*(matrix[i]+col-1)] ^ alpha_to[(*(matrix[i]+j) + solutions[j]) % n]]; 
+        }
+      }
+    }
+    if(*(matrix[i]+col-1) == -1){
+      solutions[i] = -1;
+    }else{
+      solutions[i] = (*(matrix[i]+col-1) + (n - *(matrix[i]+i))) % n; 
+    }
+  }
+}
+
+//lenA is the length of polyA (degreeA+1), same for lenB
+void poly_division(int A[], int B[], int lenA, int lenB, int plow[]){
+  int hA = 0;              //h stands for head
+  int hB = lenA - lenB;    
+  int i, div, tem, tem1;
+
+  while(hA <= hB){
+    div = (A[hA] + (n - B[hB])) % n;
+    plow[hA] = div;
+    tem = hA;
+    for(i = 0; i < lenB; i++){
+      if(B[hB+i] != -1){
+        if(A[hA+i] == -1){
+          A[hA+i] = alpha_to[(B[hB+i] + div)%n];
+        }else{
+          A[hA+i] = alpha_to[A[hA+i]] ^ alpha_to[(B[hB+i] + div)%n];
+        }
+        A[hA+i] = index_of[A[hA+i]];
+      }
+
+      if(A[hA+i] == -1){
+        tem++;
+      }if(A[hA+i] != -1 || tem == lenA){
+        tem1 = tem;
+      }      
+    }
+    hA = tem1;
+  }
+
+  for(i = 0; i < lenA; i++){
+    if(A[i] != -1){
+      tolerantflag = 0;
+    }
+  }
+}
+
+void bubble_sort(uint8_t arr[], int len) {
+    int i, j, temp;
+    for (i = 0; i < len - 1; i++){
+        for (j = 0; j < len - 1 - i; j++){
+            if (arr[j] > arr[j + 1]){
+                temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
     }
 }
 
-//this function calculates the secure sketch values
-void findmistake(int size, int num, long double* set, long double psvalues[][4]){
+void transform(const uint8_t *msg, uint32_t *h){
 
-    int i;
-    int arr[size];
-    for(i = 0; i < size; i++){
-        arr[i] = i;
+    uint32_t w[64];
+    uint32_t a0, b1, c2, d3, e4, f5, g6, h7;
+    uint32_t t1, t2;
+ 
+    int i, j = 0;
+ 
+    for (i=0; i<16; i++) {
+        w[i] = (uint32_t)msg[j]<<24 | (uint32_t)msg[j+1]<<16 | (uint32_t)msg[j+2]<<8 | msg[j+3];
+        j += 4;
     }
-    int result[num];
-    int val = 0;
-    int* valpointer = &val;
+ 
+    for(i=16; i<64; i++){
+        w[i] = SSIG1(w[i-2])+w[i-7]+SSIG0(w[i-15])+w[i-16];
+    }
+ 
+    a0 = h[0];
+    b1 = h[1];
+    c2 = h[2];
+    d3 = h[3];
+    e4 = h[4];
+    f5 = h[5];
+    g6 = h[6];
+    h7 = h[7];
+ 
+    for (i= 0; i<64; i++) {
+        t1 = h7 + BSIG1(e4) + CHX(e4, f5, g6) + inisett[i] + w[i];
+        t2 = BSIG0(a0) + MAJ(a0, b1, c2);
+        h7 = g6;
+        g6 = f5;
+        f5 = e4;
+        e4 = d3 + t1;
+        d3 = c2;
+        c2 = b1;
+        b1 = a0;
+        a0 = t1 + t2;
+    }
+ 
+    h[0] += a0;
+    h[1] += b1;
+    h[2] += c2;
+    h[3] += d3;
+    h[4] += e4;
+    h[5] += f5;
+    h[6] += g6;
+    h[7] += h7;
+}
+ 
+void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
+{
+    uint8_t *tmp = (uint8_t*)message;
+    uint8_t  cover_data[SHA256_COVER_SIZE];
+    uint32_t cover_size = 0;
+    
+    uint32_t i = 0;
+    uint32_t blocknum = 0;
+    uint32_t padlen = 0;
+    uint32_t h[8];
+ 
+    h[0] = 0x6a09e667;
+    h[1] = 0xbb67ae85;
+    h[2] = 0x3c6ef372;
+    h[3] = 0xa54ff53a;
+    h[4] = 0x510e527f;
+    h[5] = 0x9b05688c;
+    h[6] = 0x1f83d9ab;
+    h[7] = 0x5be0cd19;
+ 
+    memset(cover_data, 0x00, sizeof(uint8_t)*SHA256_COVER_SIZE);
+ 
+    blocknum = len / SHA256_BLOCK_SIZE;
+    padlen = len % SHA256_BLOCK_SIZE;
+ 
+    if (padlen < 56 ) {
+        cover_size = SHA256_BLOCK_SIZE;
+    }else {
+        cover_size = SHA256_BLOCK_SIZE*2;
+    }
+ 
+    if (padlen != 0) {
+        memcpy(cover_data, tmp + (blocknum * SHA256_BLOCK_SIZE), padlen);
+    }
+    cover_data[padlen] = 0x80;
+    cover_data[cover_size-4]  = ((len*8)&0xff000000) >> 24;
+    cover_data[cover_size-3]  = ((len*8)&0x00ff0000) >> 16;
+    cover_data[cover_size-2]  = ((len*8)&0x0000ff00) >> 8;
+    cover_data[cover_size-1]  = ((len*8)&0x000000ff);
+ 
+    for (i=0; i<blocknum; i++) {
+        transform(tmp, h);
+        tmp += SHA256_BLOCK_SIZE;
+    }
 
-    comb(arr, 0, result, num, num, sizeof(arr)/sizeof(int), set, psvalues, valpointer);
+    tmp = cover_data;
+    blocknum = cover_size / SHA256_BLOCK_SIZE;
+    for (i=0; i<blocknum; i++) {
+        transform(tmp, h);
+        int j;
+        tmp += SHA256_BLOCK_SIZE;
+    }
+
+
+    
+    memcpy(sha, h, sizeof(uint32_t)*8);
+
 }
 
