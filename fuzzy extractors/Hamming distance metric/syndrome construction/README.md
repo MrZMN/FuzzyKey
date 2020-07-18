@@ -1,20 +1,26 @@
-# Fuzzy Extractors - syndrome construction
+# Fuzzy Extractors - syndrome construction (based on Hamming distance metric)
 
 Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRICS AND OTHER NOISY DATA' by DODIS, etc. (2008 edited version)
 
 ### Assumptions
-1. We could generate a hundreds-bit long string from the PS. The actual length should be the same as the codeword generated from 128 bit-key. For example, if we use a (131,255) BCH code, we need a 255-bit PS string.
+1. We could not only measure the PS values, but could generate a hundreds-bit long string from the PS measurements. The string length should be the same as the overall codeword (encoded key using ECC) length. For example, if we use (255,131) BCH code, we'll get one 255-bit codeword, so we need a 255-bit PS string.
 
 ### Protocol Description
 
-- TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (depending on string length required).
-- Both devices convert the PS analog signal to n-bit strings PS and PS'. These two strings should be very similar. 
-- TX choose one kind of ECC. Then calculates SS = syn(PS), which is the ECC syndrome of the PS. Then TX generates a random string s. 
-- TX computes ECC(SS) and ECC(s). This is for deleting the channel error.
-- TX sends ECC(SS) and ECC(s) to RX over the wireless channel. This channel includes air and human tissue, which might cause error.
-- RX received ECC(SS)' and ECC(s)'. RX decodes them to be SS and s.
-- RX calculates syn(PS'), then calculates syn(err) = syn(PS') - SS = syn(PS') - syn(PS). err is the difference between PS and PS'.
-- RX calculates err based on syn(err). After this, gets PS = PS' xor err.
-- RX uses a strong random extractor (a SHA-256 could be used) to generate a uniformly distributed key. PS and s are the inputs of the extractor.
+- TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the ps string length required).
+- Suppose we use (n,k) binary BCH code. Both devices convert the PS analog signal to n-bit strings PS and PS'. These two strings should be very similar. 
+- TX regards the n-bit PS as a codeword (although it's not), and calculates SS = syndrome(PS), which is the ECC syndrome of the PS. Then TX generates a random n-bit string s.
+- TX sends SS and s to RX over the wireless channel.
+- RX received SS and s.
+- RX calculates syndrome(PS') just like what TX did, then calculates syndrome(err) = syndrome(PS') xor syndrome(PS) = syndrome(PS') xor SS. err is the mismatch between PS and PS'. If syndrome(err) is a zero vector, there're no mismatches on PS measurements between TX/RX.
+- If syndrome(err) isn't a zero vector, RX corrects PS' based on syndrome(err). The corrected PS data should be the same as the one at TX side.
+- After sharing PS values and a random string s, both TX/RX compute PS = PS xor s, then use PS as the input of a strong random extractor (a SHA-256 in our implementation), which outputs a uniformly distributed key. We take the first 128-bit of the sha-256 output as the encryption key.
 
-- Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX
+- (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
+
+### Details
+
+- We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc. The choice of ECC code should follow these conditions: The error tolerance ability should be related with the PS inequality; the device ability, such as memory, energy consumption should be concerned; the type of PS mismatches, such as consecutive or random, should be concerned.
+- In the above implementation, errors on wireless channel wasn't concerned.
+
+### Security Level
