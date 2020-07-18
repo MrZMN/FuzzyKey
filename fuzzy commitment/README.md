@@ -7,7 +7,7 @@ Based on the paper 'A Fuzzy Commitment Scheme' by Juels & Wattenberg
 
 ### Protocol Description
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the ps string length required).
-- Suppose we use (n,k) binary BCH code, Both devices convert the PS analog signal to n-bit strings PS and PS'. These two strings should be very similar. 
+- Suppose we use (n,k) binary BCH code. Both devices convert the PS analog signal to n-bit strings PS and PS'. These two strings should be very similar. 
 - TX generates a purely random 128-bit string (may add some zero paddings on it to be k-length), then encodes it to be a n-bit codeword c using error correction code. 
 - TX computes δ = c xor PS.
 - TX sends δ to RX over the wireless channel. 
