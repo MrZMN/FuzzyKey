@@ -1,12 +1,10 @@
-#include <time.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
-#define numofps 10      //num of ps measurements (s in the fuzzy extractor paper)
+#define pslength 10     //num of ps measurements on both sides ('s' in the fuzzy extractor paper) in each operation, assume each ps value is one byte 
+#define opernum 2       //the num of operations needed
 #define t 2             //error tolerance (t in the fuzzy extractor paper), which stands for max set difference size between TX/RX, must be even number 
-#define n 255           //n = 2^m-1
 
 //define the operations for sha-256  
 #define SHFR(x, times) (((x) >> (times)))
@@ -20,7 +18,7 @@
 #define SSIG1(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ SHFR(x, 10))
 #define SHA256_BLOCK_SIZE (512/8)
 #define SHA256_COVER_SIZE (SHA256_BLOCK_SIZE*2)
-
+//the IV of sha-256
 static uint32_t inisett[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -33,164 +31,12 @@ static uint32_t inisett[64] = {
 };
 
 //GF(2^8)
+#define n 255           //n = 2^m-1
 //poly form
 int alpha_to[n+1] = {1, 2, 4, 8, 16, 32, 64, 128, 113, 226, 181, 27, 54, 108, 216, 193, 243, 151, 95, 190, 13, 26, 52, 104, 208, 209, 211, 215, 223, 207, 239, 175, 47, 94, 188, 9, 18, 36, 72, 144, 81, 162, 53, 106, 212, 217, 195, 247, 159, 79, 158, 77, 154, 69, 138, 101, 202, 229, 187, 7, 14, 28, 56, 112, 224, 177, 19, 38, 76, 152, 65, 130, 117, 234, 165, 59, 118, 236, 169, 35, 70, 140, 105, 210, 213, 219, 199, 255, 143, 111, 222, 205, 235, 167, 63, 126, 252, 137, 99, 198, 253, 139, 103, 206, 237, 171, 39, 78, 156, 73, 146, 85, 170, 37, 74, 148, 89, 178, 21, 42, 84, 168, 33, 66, 132, 121, 242, 149, 91, 182, 29, 58, 116, 232, 161, 51, 102, 204, 233, 163, 55, 110, 220, 201, 227, 183, 31, 62, 124, 248, 129, 115, 230, 189, 11, 22, 44, 88, 176, 17, 34, 68, 136, 97, 194, 245, 155, 71, 142, 109, 218, 197, 251, 135, 127, 254, 141, 107, 214, 221, 203, 231, 191, 15, 30, 60, 120, 240, 145, 83, 166, 61, 122, 244, 153, 67, 134, 125, 250, 133, 123, 246, 157, 75, 150, 93, 186, 5, 10, 20, 40, 80, 160, 49, 98, 196, 249, 131, 119, 238, 173, 43, 86, 172, 41, 82, 164, 57, 114, 228, 185, 3, 6, 12, 24, 48, 96, 192, 241, 147, 87, 174, 45, 90, 180, 25, 50, 100, 200, 225, 179, 23, 46, 92, 184, 0};
 //index form
 int index_of[n+1] = {-1, 0, 1, 231, 2, 207, 232, 59, 3, 35, 208, 154, 233, 20, 60, 183, 4, 159, 36, 66, 209, 118, 155, 251, 234, 245, 21, 11, 61, 130, 184, 146, 5, 122, 160, 79, 37, 113, 67, 106, 210, 224, 119, 221, 156, 242, 252, 32, 235, 213, 246, 135, 22, 42, 12, 140, 62, 227, 131, 75, 185, 191, 147, 94, 6, 70, 123, 195, 161, 53, 80, 167, 38, 109, 114, 203, 68, 51, 107, 49, 211, 40, 225, 189, 120, 111, 222, 240, 157, 116, 243, 128, 253, 205, 33, 18, 236, 163, 214, 98, 247, 55, 136, 102, 23, 82, 43, 177, 13, 169, 141, 89, 63, 8, 228, 151, 132, 72, 76, 218, 186, 125, 192, 200, 148, 197, 95, 174, 7, 150, 71, 217, 124, 199, 196, 173, 162, 97, 54, 101, 81, 176, 168, 88, 39, 188, 110, 239, 115, 127, 204, 17, 69, 194, 52, 166, 108, 202, 50, 48, 212, 134, 41, 139, 226, 74, 190, 93, 121, 78, 112, 105, 223, 220, 241, 31, 158, 65, 117, 250, 244, 10, 129, 145, 254, 230, 206, 58, 34, 153, 19, 182, 237, 15, 164, 46, 215, 171, 99, 86, 248, 143, 56, 180, 137, 91, 103, 29, 24, 25, 83, 26, 44, 84, 178, 27, 14, 45, 170, 85, 142, 179, 90, 28, 64, 249, 9, 144, 229, 57, 152, 181, 133, 138, 73, 92, 77, 104, 219, 30, 187, 238, 126, 16, 193, 165, 201, 47, 149, 216, 198, 172, 96, 100, 175, 87};
-int tolerantflag = 1;   //show if there're mismatches
-
-int projectpoints(int, int, int, int []);
-void guass_elimination(int *[], int, int);
-void exchange_row(int *[], int, int);
-void solve_equation(int [], int *[], int, int);
-void poly_division(int [], int [], int, int, int []);
-void bubble_sort(uint8_t [], int);
-void transform(const uint8_t *, uint32_t *);
-void sha256(const uint8_t *, uint32_t, uint32_t *);
-
-void BerlekampWelch(uint8_t [], int []);
-
-//The RX of Improved Juels-Sudan sketch
-//the only info received from TX side is ss[]
-int main(){
-
-    register int i, j, k, index = 0;
-    
-    uint8_t wholeps[2*numofps] = {42, 34, 198, 241, 144, 49, 98, 237, 140, 205, 182, 39, 80, 120, 141, 232, 97, 199, 10, 31};
-    //add some errors
-    wholeps[0] ^= 1;
-    // wholeps[10] ^= 1;
-    wholeps[11] ^= 1;
-
-    uint8_t wholess[2*t] = {254, 72, 195, 248};
-    uint8_t randStr[2*numofps] = {43, 2, 191, 176, 51, 128, 227, 3, 133, 49, 208, 156, 149, 171, 93, 190, 85, 15, 87, 134};
-    uint8_t ps[numofps];    //ps[] stores the PS values measured by the RX - poly form
-    int ss[t];                                   //ss[] stores the secure sketch received from TX, used to construct poly phigh(x)
-    uint32_t key[8];            //the final key
-
-    //divide the computation into 2 pieces because of device limitation
-    for(k = 0; k < 2; k++){
-
-      for(i = 0; i < numofps; i++){
-        ps[i] = wholeps[k*numofps+i];
-      }
-      for(i = 0; i < t; i++){
-        ss[i] = wholess[k*t+i];
-      }
-
-      BerlekampWelch(ps, ss);
-
-      for(i = 0; i < numofps; i++){
-        wholeps[index] = ps[i];
-        index++;
-      }
-
-    }
-
-    //sort the array
-    bubble_sort(wholeps, 2*numofps);
-
-    //ps values xor random string
-    for(i = 0; i < 2*numofps; i++){
-        wholeps[i] ^= randStr[i];
-    }
-
-    //generate the key
-    sha256(wholeps, 2*numofps, key);
-
-    //take the first 128 bits of sha-256 output as the key
-    printf("The final key\n");
-    for(i = 0; i < 4; i++){
-        printf("%x", key[i]);
-    }
-
-}
-
-void BerlekampWelch(uint8_t ps[], int ss[]){
-  register int i, j;
-  int points[numofps][2];                                           //points[][2] stores the points generated by projecting ps values on phigh(x)
-  int Ab_matrix[numofps][numofps+1];                                //Ab_matrix[][] stores the augmented matrix used in B-W algorithm
-  int *Ab[numofps];                                                 //Ab is a pointer array - used to accelarate computation
-
-  //evaluate the points by projecting ps values on phigh(x). The points are stored in points[][]
-  for(i = 0; i < numofps; i++){
-      points[i][0] = ps[i];
-      points[i][1] = projectpoints(numofps, t, points[i][0], ss);
-  }
-
-  //Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 'numofps' num of points, succeed if at least (s-t/2) points are legit
-  //generate the augmented matrix - this requires modification for diff settings
-  for(i = 0; i < numofps; i++){ 
-    for(j = 0; j < numofps-t/2; j++){
-      Ab_matrix[i][j] = (points[i][0] * (numofps-t/2-1-j)) % n;
-    }
-    if(points[i][1] == -1){
-      Ab_matrix[i][9] = -1;     //e1
-      Ab_matrix[i][10] = -1;
-    }else{
-      Ab_matrix[i][9] = points[i][1];                           //e1
-      Ab_matrix[i][10] = (points[i][0] + points[i][1]) % n;
-    }
-  }
-  //convert the 2D augmented array into 1D pointer array format, to accelerate computation
-  for(i=0;i<numofps;i++){
-      Ab[i] = Ab_matrix[i];
-  }
-  
-  //Elementary row transformation to solve the solutions of equations
-  guass_elimination(Ab, numofps, numofps+1);
-  int solution[numofps];
-  solve_equation(solution, Ab, numofps, numofps+1);
-
-  //The solutions of the equations consist of 2 polys: assume they are A[] and B[]
-  int A[numofps - t/2], B[numofps - t/2];
-  for(i = 0; i < numofps - t/2; i++){
-    A[i] = solution[i];
-    if(i < numofps - t -1){
-      B[i] = -1;
-    }else if(i == numofps - t -1){
-      B[i] = 0;
-    }else{
-      B[i] = solution[i + t/2];
-    }
-  }
-
-  //The poly plow(x) (in fuzzy extractor paper) is the division of A[]/B
-  int plow[numofps - t]; 
-  for(i = 0; i < numofps - t; i++){
-    plow[i] = -1;
-  }
-  poly_division(A, B, numofps - t/2, t/2 + 1, plow);
-
-  if(tolerantflag){
-    //Find the roots of p(x) = phigh(x) + plow(x), which are the PS values at the TX side
-    int px[numofps];
-    uint8_t roots[numofps]; 
- 
-    for(i = 0; i < t; i++){
-      px[i] = ss[i]; 
-    }
-    for(i = t; i < numofps; i++){
-      px[i] = plow[i - t];
-    }
-
-    int idx = 0, result = 0;
-    for(i = 0; i < n; i++){   //test all posibilities on GF(2^m)
-      result = projectpoints(numofps+1, numofps, i, px);
-      if(result == -1){
-        roots[idx] = i;
-        idx++;
-      }
-    }
-
-    for(i = 0; i < numofps; i++){
-      ps[i] = roots[i];
-    }
-
-  }else{
-    printf("Too many errors, out of the tolerance interval\n");
-  }
-}
+int tolerantflag = 1;   //show if the mismatches are within the error tolerance interval
 
 
 //project x -> y on the poly[] 
@@ -211,6 +57,21 @@ int projectpoints(int size, int numcoeff, int x, int poly[]){
     return y;
 }
 
+//put the row (whose |flag-th value| is not 0) to the top
+void exchange_row(int *matrix[], int flag, int row){
+  int i;
+  int *temp;
+
+  for(i = flag+1; i < row; i++){  //check the rows from row flag+1 to the bottom
+    if(*(matrix[i]+flag) != -1){
+      temp = matrix[flag];
+      matrix[flag] = matrix[i];
+      matrix[i] = temp;
+    }
+  }
+}
+
+//do guass elimination on matrix[]
 void guass_elimination(int *matrix[], int row, int col){
   int i, j, k;
   int div;
@@ -246,20 +107,7 @@ void guass_elimination(int *matrix[], int row, int col){
   
 }
 
-//put the row (whose |flag-th value| is not 0) to the top
-void exchange_row(int *matrix[], int flag, int row){
-  int i;
-  int *temp;
-
-  for(i = flag+1; i < row; i++){  //check the rows from row flag+1 to the bottom
-    if(*(matrix[i]+flag) != -1){
-      temp = matrix[flag];
-      matrix[flag] = matrix[i];
-      matrix[i] = temp;
-    }
-  }
-}
-
+//solve the solutions on a triangular matrix matrix[] (after guass elimination)
 void solve_equation(int solutions[], int *matrix[], int row, int col){
   int i, j;
   for(i = row-1; i >= 0; i--){
@@ -280,7 +128,7 @@ void solve_equation(int solutions[], int *matrix[], int row, int col){
   }
 }
 
-//lenA is the length of polyA (degreeA+1), same for lenB
+//Division between polynomials. lenA is the length of polyA[], same for lenB. store the result poly in poly[]
 void poly_division(int A[], int B[], int lenA, int lenB, int plow[]){
   int hA = 0;              //h stands for head
   int hB = lenA - lenB;    
@@ -316,6 +164,7 @@ void poly_division(int A[], int B[], int lenA, int lenB, int plow[]){
   }
 }
 
+//sort arr[] in ascending form
 void bubble_sort(uint8_t arr[], int len) {
     int i, j, temp;
     for (i = 0; i < len - 1; i++){
@@ -327,6 +176,92 @@ void bubble_sort(uint8_t arr[], int len) {
             }
         }
     }
+}
+
+//Berlekamp-Welch algorithm
+void BerlekampWelch(uint8_t ps[], int ss[]){
+  register int i, j;
+  int points[pslength][2];                                           //points[][2] stores the points generated by projecting ps values on phigh(x)
+  int Ab_matrix[pslength][pslength+1];                                //Ab_matrix[][] stores the augmented matrix used in B-W algorithm
+  int *Ab[pslength];                                                 //Ab is a pointer array - used to accelarate computation
+
+  //evaluate the points by projecting ps values on phigh(x). The points are stored in points[][]
+  for(i = 0; i < pslength; i++){
+      points[i][0] = ps[i];
+      points[i][1] = projectpoints(pslength, t, points[i][0], ss);
+  }
+
+  //Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 'pslength' num of points, succeed if at least (s-t/2) points are legit
+  //generate the augmented matrix - this requires modification for diff settings
+  for(i = 0; i < pslength; i++){ 
+    for(j = 0; j < pslength-t/2; j++){
+      Ab_matrix[i][j] = (points[i][0] * (pslength-t/2-1-j)) % n;
+    }
+    if(points[i][1] == -1){
+      Ab_matrix[i][9] = -1;     //e1
+      Ab_matrix[i][10] = -1;
+    }else{
+      Ab_matrix[i][9] = points[i][1];                           //e1
+      Ab_matrix[i][10] = (points[i][0] + points[i][1]) % n;
+    }
+  }
+  //convert the 2D augmented array into 1D pointer array format, to accelerate computation
+  for(i=0;i<pslength;i++){
+      Ab[i] = Ab_matrix[i];
+  }
+  
+  //Elementary row transformation to solve the solutions of equations
+  guass_elimination(Ab, pslength, pslength+1);
+  int solution[pslength];
+  solve_equation(solution, Ab, pslength, pslength+1);
+
+  //The solutions of the equations consist of 2 polys: assume they are A[] and B[]
+  int A[pslength - t/2], B[pslength - t/2];
+  for(i = 0; i < pslength - t/2; i++){
+    A[i] = solution[i];
+    if(i < pslength - t -1){
+      B[i] = -1;
+    }else if(i == pslength - t -1){
+      B[i] = 0;
+    }else{
+      B[i] = solution[i + t/2];
+    }
+  }
+
+  //The poly plow(x) (in fuzzy extractor paper) is the division of A[]/B
+  int plow[pslength - t]; 
+  for(i = 0; i < pslength - t; i++){
+    plow[i] = -1;
+  }
+  poly_division(A, B, pslength - t/2, t/2 + 1, plow);
+
+  if(tolerantflag){
+    //Find the roots of p(x) = phigh(x) + plow(x), which are the PS values at the TX side
+    int px[pslength];
+    uint8_t roots[pslength]; 
+ 
+    for(i = 0; i < t; i++){
+      px[i] = ss[i]; 
+    }
+    for(i = t; i < pslength; i++){
+      px[i] = plow[i - t];
+    }
+
+    int idx = 0, result = 0;
+    for(i = 0; i < n; i++){   //test all posibilities on GF(2^m)
+      result = projectpoints(pslength+1, pslength, i, px);
+      if(result == -1){
+        roots[idx] = i;
+        idx++;
+      }
+    }
+
+    for(i = 0; i < pslength; i++){
+      ps[i] = roots[i];
+    }
+
+  }//otherwise it means there're too many errors
+
 }
 
 void transform(const uint8_t *msg, uint32_t *h){
@@ -437,3 +372,59 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
 
 }
 
+//The RX of Improved Juels-Sudan fuzzy vault
+//Received two info from TX, which are randStr[] and wholess[] below 
+int main(){
+
+    register int i, j, k;
+    
+    uint8_t wholeps[opernum*pslength] = {146, 209, 212, 73, 96, 79, 23, 235, 237, 141, 226, 204, 177, 70, 50, 243, 25, 21, 96, 100}; //All the PS values (in 'opernum' num of operations) received from TX
+    //add some errors. The error tolerance depends on t.
+    wholeps[0] ^= 1;
+    wholeps[10] ^= 1;
+    // wholeps[11] ^= 1;
+    uint8_t wholess[opernum*t] = {23, 218, 155, 220};   //All the secure sketches (in 'opernum' num of operations) received from TX
+    uint8_t randStr[opernum*pslength] = {73, 123, 159, 178, 135, 200, 148, 202, 166, 145, 76, 91, 102, 199, 231, 124, 14, 186, 46, 49}; //Received from TX
+    uint8_t ps[pslength];       //ps[] stores the PS values measured by the RX - poly form. In one operation only
+    int ss[t];                  //ss[] stores the secure sketch received from TX. In one operation only
+    uint32_t key[8];            //the final key
+
+    //divide the computation into opernum pieces because of device limitation, otherwise MSP430 wont hold the correcting process
+    for(k = 0; k < opernum; k++){
+
+      //Reload the PS measurements and secure sketch for each operation
+      for(i = 0; i < pslength; i++){
+        ps[i] = wholeps[k*pslength+i];
+      }
+      for(i = 0; i < t; i++){
+        ss[i] = wholess[k*t+i];
+      }
+
+      //Correct the mismatches of PS values
+      BerlekampWelch(ps, ss);
+
+      for(i = 0; i < pslength; i++){
+        wholeps[i+k*pslength] = ps[i];
+      }
+    }
+
+    //Generate the 128-bit key
+    //sort the array (sort because RX could only recover all the PS elements, but doesn't ensure the PS values are in the same order)
+    bubble_sort(wholeps, opernum*pslength);
+  
+    //ps values xor random string
+    for(i = 0; i < opernum*pslength; i++){
+        wholeps[i] ^= randStr[i];
+    }
+
+    //generate the uniformly distributed key using sha-256
+    sha256(wholeps, opernum*pslength, key);
+
+    //take the first 128 bits of sha-256 output as the key
+    printf("The final key\n");
+    for(i = 0; i < 4; i++){
+        printf("%x", key[i]);
+    }
+    printf("\n");
+
+}

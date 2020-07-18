@@ -4,13 +4,14 @@
 #include <stdint.h>
 #include <string.h>
 
-//parameter settings of a (n,k) RS-code
-#define m  5		// RS code over GF(2^m), each sysmbol contains m bits 
-#define n  31		// n = 2^m-1, length of codeword (symbols) 
-// #define t  2 	// number of symbol errors that can be corrected
-#define k  27		// k = n-2*t, length of data (symbols) 
-#define pslength m*n/8+1	//20
-#define keylength m*k/8+1	//17
+//parameter settings of a (n,k) RS-code. n, k means num of symbols
+#define m  5        // RS code over GF(2^m), each sysmbol contains m bits 
+#define n  31       // n = 2^m-1, length of codeword (symbols) 
+#define k  27       // k = n-2*t, length of data (symbols) 
+// #define t  2     // number of symbol errors that can be corrected
+
+#define pslength m*n/8+1    //20 bytes, m*n = 155 bits valid, the rest is 0
+#define keylength m*k/8+1   //17 bytes, m*k = 135 bits valid, the rest is 0
 
 //define the operations for sha-256  
 #define SHFR(x, times) (((x) >> (times)))
@@ -24,7 +25,7 @@
 #define SSIG1(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ SHFR(x, 10))
 #define SHA256_BLOCK_SIZE (512/8)
 #define SHA256_COVER_SIZE (SHA256_BLOCK_SIZE*2)
-
+//the IV of sha-256
 static uint32_t inisett[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -36,155 +37,51 @@ static uint32_t inisett[64] = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-//GF(2^m) and the generator poly
+//GF(2^m)
+//poly form
 int alpha_to [n+1] = {1, 2, 4, 8, 16, 5, 10, 20, 13, 26, 17, 7, 14, 28, 29, 31, 27, 19, 3, 6, 12, 24, 21, 15, 30, 25, 23, 11, 22, 9, 18, 0};
+//index form
 int index_of [n+1] = {-1, 0, 1, 18, 2, 5, 19, 11, 3, 29, 6, 27, 20, 8, 12, 23, 4, 10, 30, 17, 7, 22, 28, 26, 21, 25, 9, 16, 13, 14, 24, 15};
+//generator poly of RS code
 int g[n-k+1] = {10, 29, 19, 24, 0};
 
-void encode_rs(int [], int []);
-void transform(const uint8_t *, uint32_t *);
-void sha256(const uint8_t *, uint32_t, uint32_t *);
+//RS encoding: data[k] as input, codeword[n] as output. In each byte of codeword[] and data[], only the last m-bits are valid
+void encode_rs(int codeword[n], int data[k]){
+    register int i,j;
+    int temp;
+    int b[n-k];
 
-// This is a 'code-offset' fuzzy extractor constructed by a (31,27) RS-code
-// ps is 155 bit string (in 20 bytes)
-// All the above codes are based on (31,27) RS-code. If the ECC changes, some slight changes are required
-int main(){
-
-	srand((unsigned)time(NULL));	//for random number generation
-
-	register int i, j;
-	int bytepos, bitpos;
-	int idx = 0;
-
-	uint8_t ps[pslength];			//stores the ps measurements
-	int nonce[keylength];		//stores a random nonce
-	int ss[pslength];			//stores the tansmitted info from TX->RX
-	int data[k], codeword[n];	//For ECC coding usage
-	uint8_t randStr[pslength];			//stores the ps measurements
-	uint32_t key[8];			//the final key
-
-	//Randomly generate the ps values - first legit 155 bits in 20 bytes
-	for(i = 0; i < pslength; i++){
-		ps[i] = rand()%256;
-	}
-	ps[pslength-1] &=  0xe0;	//leave the 156-160th bits 0
-	//Randomly generate the random String - first legit 155 bits in 20 bytes
-	for(i = 0; i < pslength; i++){
-		randStr[i] = rand()%256;
-	}
-	//Randomly generate a nonce - first legit 135 bits in 17 bytes
-	for(i = 0; i < keylength; i++){
-		nonce[i] = rand()%256;
-	} 
-	nonce[keylength-1] &= 0xfe;	//leave the 136th bit 0
-
-	//For ECC encoding only. Convert the nonce array from 17 bytes(8 bit each) -> 27 symbols(5 bits each)
-	for(i = 0; i < k; i ++){
-		data[i] = 0;
-		for(j = 0; j < m; j++){
-			idx = m*i + j;
-			bytepos = idx / 8;
-			bitpos = idx % 8;
-			data[i] <<= 1;
-			data[i] ^= ((nonce[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
-		}
-	}
-
-	//Encoding. data(27 symbols) -> codeword(31 symbols)
-	encode_rs(codeword, data);
-
-	//For reducing the trasmission load. Convert the 31 symbols(5 bits each) -> 20 bytes(8 bits each)
-	for(i = 0; i < pslength; i++){
-		ss[i] = 0;
-		for(j = 0; j < 8; j++){
-			idx = i*8 + j;
-			bytepos = idx / m;
-			bitpos = idx % m;
-			ss[i] <<= 1;
-			if(bytepos < n){
-				ss[i] ^= (codeword[bytepos] & (0x10 >> bitpos)) >> (4 - bitpos); 
-			}
-		}
-	}
-
-	//PS xor Codeword(of the nonce). This is the info to be transmitted
-	for( i = 0; i < pslength; i++){
-		ss[i] ^= ps[i];
-	}
-
-	printf("The PS values: (copy it to Receiver.c)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ps[i]);
-	}
-	printf("\n");
-
-	printf("The random String: (copy it to Receiver.c)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", randStr[i]);
-	}
-	printf("\n");
-
-	printf("secure sketch is: (copy it to Receiver.c)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ss[i]);
-	}
-	printf("\n");
-
-	//////The next thing is to send arrays 'ss[]' (20 bytes) and 'randStr[]' (20 bytes) to RX
-  	//////There should be an ACK mechamism between TX and RX, such as TX sends a MAC to RX. 
-
-	//ps values xor random string
-	for(i = 0; i < pslength; i++){
-		ps[i] ^= randStr[i];
-	}
-
-	//generate the key
-	sha256(ps, pslength, key);
-
-	//take the first 128 bits of sha-256 output as the key
-	for(i = 0; i < 4; i++){
-		printf("%x", key[i]);
-	}
-
-}
-
-//data[] as input, codeword[] as output
-void encode_rs(int recd[n], int data[k]){
-	register int i,j;
-  	int feedback;
-	int b[n-k];
-
-  	for(i = 0; i < n-k; i++){
-    	b[i] = 0;
-  	}
+    for(i = 0; i < n-k; i++){
+        b[i] = 0;
+    }
      
-  	for(i = k-1; i >= 0; i--){
-    	feedback = index_of[data[i]^b[n-k-1]];
-    	if(feedback != -1){   
-      		for(j=n-k-1; j>0; j--){
-        		if(g[j] != -1){
-          			b[j] = b[j-1]^alpha_to[(g[j]+feedback)%n];
-        		}
-        		else{
-          			b[j] = b[j-1];
-        		}
-      		}
-      	b[0] = alpha_to[(g[0]+feedback)%n];
-    	}
-    	else{
-      		for(j=n-k-1; j>0; j--){
-        		b[j] = b[j-1] ;
-      		}
-      		b[0] = 0 ;
-    	}
-  	}
+    for(i = k-1; i >= 0; i--){
+        temp = index_of[data[i]^b[n-k-1]];
+        if(temp != -1){   
+            for(j=n-k-1; j>0; j--){
+                if(g[j] != -1){
+                    b[j] = b[j-1]^alpha_to[(g[j]+temp)%n];
+                }
+                else{
+                    b[j] = b[j-1];
+                }
+            }
+        b[0] = alpha_to[(g[0]+temp)%n];
+        }
+        else{
+            for(j=n-k-1; j>0; j--){
+                b[j] = b[j-1] ;
+            }
+            b[0] = 0 ;
+        }
+    }
 
-  	for(i=0; i<n-k; i++){
-    	recd[i] = b[i];
-  	}
-  	for(i=0; i<k; i++){
-    	recd[i+n-k] = data[i];
-  	} 
+    for(i=0; i<n-k; i++){
+        codeword[i] = b[i];
+    }
+    for(i=0; i<k; i++){
+        codeword[i+n-k] = data[i];
+    } 
 } 
 
 void transform(const uint8_t *msg, uint32_t *h){
@@ -289,6 +186,109 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
     }
     
     memcpy(sha, h, sizeof(uint32_t)*8);
+}
+
+// This is TX of a 'code-offset' fuzzy extractor constructed by a (31,27) RS-code
+// ps is 155 bit string (in 20 bytes)
+// All the above codes are based on (31,27) RS-code. If the ECC changes, some slight changes are required
+int main(){
+
+	srand((unsigned)time(NULL));	//for random number generation
+
+	register int i, j;
+	int bytepos, bitpos, idx = 0;
+
+	uint8_t ps[pslength];          //stores the ps measurements
+	int nonce[keylength];          //stores a random nonce
+	int ss[pslength];              //stores the tansmitted info from TX->RX
+	int data[k], codeword[n];      //For ECC coding usage
+	uint8_t randStr[pslength];     //stores a random string used in a strong extractor
+	uint32_t key[8];               //the final key
+
+	//Randomly generate the ps values - first legit 155 bits in 20 bytes
+	for(i = 0; i < pslength; i++){
+		ps[i] = rand()%256;
+	}
+	ps[pslength-1] &=  0xe0;	//leave the 156-160th bits 0
+	//Randomly generate a nonce - first legit 135 bits in 17 bytes
+	for(i = 0; i < keylength; i++){
+		nonce[i] = rand()%256;
+	} 
+	nonce[keylength-1] &= 0xfe;	//leave the 136th bit 0
+    //Randomly generate the random String - first legit 155 bits in 20 bytes
+    for(i = 0; i < pslength; i++){
+        randStr[i] = rand()%256;
+    }
+
+	//For ECC encoding only. Convert the nonce array from 17 bytes(8 bit each) -> 27 symbols(5 bits each)
+    //For example: [10101010, 01010101] -> [10101, 01001, 01010, 1....]
+	for(i = 0; i < k; i ++){
+		data[i] = 0;
+		for(j = 0; j < m; j++){
+			idx = m*i + j;
+			bytepos = idx / 8;
+			bitpos = idx % 8;
+			data[i] <<= 1;
+			data[i] ^= ((nonce[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
+		}
+	}
+
+	//Encoding. data(27 symbols) -> codeword(31 symbols)
+	encode_rs(codeword, data);
+
+	//For reducing the trasmission load. Convert the 31 symbols(5 bits each) -> 20 bytes(8 bits each)
+    //For example: [10101, 01001, 01010, 1....] -> [10101010, 01010101]
+	for(i = 0; i < pslength; i++){
+		ss[i] = 0;
+		for(j = 0; j < 8; j++){
+			idx = i*8 + j;
+			bytepos = idx / m;
+			bitpos = idx % m;
+			ss[i] <<= 1;
+			if(bytepos < n){
+				ss[i] ^= (codeword[bytepos] & (0x10 >> bitpos)) >> (4 - bitpos); 
+			}
+		}
+	}
+
+	//PS xor Codeword(of the nonce). This is the info to be transmitted
+	for( i = 0; i < pslength; i++){
+		ss[i] ^= ps[i];
+	}
+
+	printf("The PS values: (copy it to Receiver)\n");
+	for(i = 0; i < pslength; i++){
+		printf("%d, ", ps[i]);
+	}
+	printf("\n");
+	printf("secure sketch is: (copy it to Receiver)\n");
+	for(i = 0; i < pslength; i++){
+		printf("%d, ", ss[i]);
+	}
+	printf("\n");
+    printf("The random String: (copy it to Receiver)\n");
+    for(i = 0; i < pslength; i++){
+        printf("%d, ", randStr[i]);
+    }
+    printf("\n");
+
+	//////The next thing is to send arrays 'ss[]' (20 bytes) and 'randStr[]' (20 bytes) to RX
+  	//////There should be an ACK mechamism between TX and RX, such as TX sends a MAC to RX. 
+
+    //Generate the 128-bit key
+	//ps values xor random string
+	for(i = 0; i < pslength; i++){
+		ps[i] ^= randStr[i];
+	}
+
+	//generate the uniformly distributed key using sha-256
+	sha256(ps, pslength, key);
+
+	//take the first 128 bits of sha-256 output as the key
+    printf("The final 128-bit key:\n");
+	for(i = 0; i < 4; i++){
+		printf("%x", key[i]);
+	}
 
 }
 

@@ -1,16 +1,15 @@
-#include <time.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 
-//parameter settings of a (n,k) RS-code
-#define m  5		// RS code over GF(2^m), each sysmbol contains m bits 
-#define n  31		// n = 2^m-1, length of codeword (symbols) 
-#define t  2 		// number of symbol errors that can be corrected
-#define k  27		// k = n-2*t, length of data (symbols) 
-#define pslength m*n/8+1	//20
-#define keylength m*k/8+1	//17
+//parameter settings of a (n,k) RS-code. n, k means num of symbols
+#define m  5    // RS code over GF(2^m), each sysmbol contains m bits 
+#define n  31   // n = 2^m-1, length of codeword (symbols) 
+#define k  27   // k = n-2*t, length of data (symbols) 
+#define t  2    // number of symbol errors that can be corrected
+
+#define pslength m*n/8+1  //20 bytes, m*n = 155 bits valid, the rest is 0
+#define keylength m*k/8+1 //17 bytes, m*k = 135 bits valid, the rest is 0
 
 //define the operations for sha-256  
 #define SHFR(x, times) (((x) >> (times)))
@@ -24,7 +23,7 @@
 #define SSIG1(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ SHFR(x, 10))
 #define SHA256_BLOCK_SIZE (512/8)
 #define SHA256_COVER_SIZE (SHA256_BLOCK_SIZE*2)
-
+//the IV of sha-256
 static uint32_t inisett[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -37,108 +36,26 @@ static uint32_t inisett[64] = {
 };
 
 //GF(2^m)
+//poly form
 int alpha_to [n+1] = {1, 2, 4, 8, 16, 5, 10, 20, 13, 26, 17, 7, 14, 28, 29, 31, 27, 19, 3, 6, 12, 24, 21, 15, 30, 25, 23, 11, 22, 9, 18, 0};
+//index form
 int index_of [n+1] = {-1, 0, 1, 18, 2, 5, 19, 11, 3, 29, 6, 27, 20, 8, 12, 23, 4, 10, 30, 17, 7, 22, 28, 26, 21, 25, 9, 16, 13, 14, 24, 15};
 
-void decode_rs(int []);
-void transform(const uint8_t *, uint32_t *);
-void sha256(const uint8_t *, uint32_t, uint32_t *);
-
-// This is a 'code-offset' fuzzy extractor constructed by a (31,27) RS-code
-// RX receives 1 string from TX, which is 20 bytes 'ss[]' below
-int main()
-{
-	srand((unsigned)time(NULL));	//for random number generation
-
-	register int i, j;
-	int bytepos, bitpos;
-	int idx = 0;
-		
-	int data[k], codeword[n];	//For ECC coding usage
-	int ecc[pslength];			//stores the codeword of the nonce (nonce is randomly produced at TX side)
-	uint8_t ps[pslength] = {125, 184, 35, 219, 244, 181, 11, 114, 43, 24, 99, 147, 160, 252, 36, 177, 26, 38, 240, 160};		//stores the ps measurements
-  uint8_t randStr[pslength] = {174, 85, 153, 153, 66, 206, 245, 166, 41, 76, 86, 161, 92, 236, 180, 253, 179, 9, 195, 11};
-	uint8_t ss[pslength] = {77, 82, 16, 130, 0, 42, 157, 56, 1, 19, 246, 76, 24, 238, 224, 12, 244, 237, 194, 192};		//stores the tansmitted info from TX->RX
-  uint32_t key[8];      //the final key
-
-	//errors. The error tolerance depends on the ECC code used. For (31,27)RS code, at most 2 consecutive 5-bit error (93.5% ps matching)
-	ps[0] ^= 1;
-	ps[10] ^= 1;
-
-	//PS(mismatch with the one in TX side) xor ss, the result ecc[] should be a malformed codeword (of the random nonce)
-	for(i = 0; i < pslength; i++){
-		ecc[i] = ss[i] ^ ps[i];
-	}
-
-	//For ECC decoding only. Convert the codeword from 20 bytes(8 bit each) -> 31 symbols(5 bits each)
-	for(i = 0; i < n; i ++){
-		codeword[i] = 0;
-		for(j = 0; j < m; j++){
-			idx = m*i + j;
-			bytepos = idx / 8;
-			bitpos = idx % 8;
-			codeword[i] <<= 1;
-			codeword[i] ^= ((ecc[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
-		}
-	}
-
-	//Decode the RS code
-	decode_rs(codeword);
-
-	//Convert the 31 symbols(5 bits each) -> 20 bytes(8 bits each)
-	for(i = 0; i < pslength; i++){
-		ecc[i] = 0;
-		for(j = 0; j < 8; j++){
-			idx = i*8 + j;
-			bytepos = idx / m;
-			bitpos = idx % m;
-			ecc[i] <<= 1;
-			if(bytepos < n){
-				ecc[i] ^= (codeword[bytepos] & (0x10 >> bitpos)) >> (4 - bitpos); 
-			}
-		}
-	}
-
-	//ss xor the corrected codeword (of the nonce), the result should be the ps values which are the same as the ones at TX side
-	for(i = 0; i < pslength; i++){
-		ss[i] ^= ecc[i];
-	}
-
-	printf("The PS is:\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ss[i]);
-	} 
-  printf("\n");
-
-  //ps values xor random string
-  for(i = 0; i < pslength; i++){
-    ss[i] ^= randStr[i];
-  }
-
-  //generate the key
-  sha256(ss, pslength, key);
-
-  //take the first 128 bits of sha-256 output as the key
-  for(i = 0; i < 4; i++){
-    printf("%x", key[i]);
-  }
-
-}
-
-void decode_rs(int recd[n]){
+//RS decoding: codeword[n] (might be malformed) as input. This function will correct it. In each byte of codeword[], only the last m-bits are valid
+void decode_rs(int codeword[n]){
    register int i,j,u,q ;
    int elp[n-k+2][n-k], d[n-k+2], l[n-k+2], u_lu[n-k+2], s[n-k+1] ;
    int count=0, syn_error=0, root[t], loc[t], z[t+1], err[n], reg[t+1] ;
 
      for (i=0; i<n; i++)
-     recd[i] = index_of[recd[i]] ;          /* put recd[i] into index form */
+     codeword[i] = index_of[codeword[i]] ;          /* put codeword[i] into index form */
 
 /* first form the syndromes */
    for (i=1; i<=n-k; i++)
     { s[i] = 0 ;
       for (j=0; j<n; j++)
-        if (recd[j]!=-1)
-          s[i] ^= alpha_to[(recd[j]+i*j)%n] ;      /* recd[j] in index form */
+        if (codeword[j]!=-1)
+          s[i] ^= alpha_to[(codeword[j]+i*j)%n] ;      /* codeword[j] in index form */
 /* convert syndrome from polynomial form to index form  */
       if (s[i]!=0)  syn_error=1 ;        /* set flag if non-zero syndrome => error */
       s[i] = index_of[s[i]] ;
@@ -258,9 +175,9 @@ void decode_rs(int recd[n]){
   /* evaluate errors at locations given by error location numbers loc[i] */
            for (i=0; i<n; i++)
              { err[i] = 0 ;
-               if (recd[i]!=-1)        /* convert recd[] to polynomial form */
-                 recd[i] = alpha_to[recd[i]] ;
-               else  recd[i] = 0 ;
+               if (codeword[i]!=-1)        /* convert codeword[] to polynomial form */
+                 codeword[i] = alpha_to[codeword[i]] ;
+               else  codeword[i] = 0 ;
              }
            for (i=0; i<l[u]; i++)    /* compute numerator of error term first */
             { err[loc[i]] = 1;       /* accounts for z[0] */
@@ -275,29 +192,28 @@ void decode_rs(int recd[n]){
                      q += index_of[1^alpha_to[(loc[j]+root[i])%n]] ;
                  q = q % n ;
                  err[loc[i]] = alpha_to[(err[loc[i]]-q+n)%n] ;
-                 recd[loc[i]] ^= err[loc[i]] ;  /*recd[i] must be in polynomial form */
+                 codeword[loc[i]] ^= err[loc[i]] ;  /*codeword[i] must be in polynomial form */
                }
             }
           }
          else    /* no. roots != degree of elp => >t errors and cannot solve */
            for (i=0; i<n; i++)        /* could return error flag if desired */
-               if (recd[i]!=-1)        /* convert recd[] to polynomial form */
-                 recd[i] = alpha_to[recd[i]] ;
-               else  recd[i] = 0 ;     /* just output received codeword as is */
+               if (codeword[i]!=-1)        /* convert codeword[] to polynomial form */
+                 codeword[i] = alpha_to[codeword[i]] ;
+               else  codeword[i] = 0 ;     /* just output received codeword as is */
        }
      else         /* elp has degree has degree >t hence cannot solve */
        for (i=0; i<n; i++)       /* could return error flag if desired */
-          if (recd[i]!=-1)        /* convert recd[] to polynomial form */
-            recd[i] = alpha_to[recd[i]] ;
-          else  recd[i] = 0 ;     /* just output received codeword as is */
+          if (codeword[i]!=-1)        /* convert codeword[] to polynomial form */
+            codeword[i] = alpha_to[codeword[i]] ;
+          else  codeword[i] = 0 ;     /* just output received codeword as is */
     }
    else       /* no non-zero syndromes => no errors: output received codeword */
     for (i=0; i<n; i++)
-       if (recd[i]!=-1)        /* convert recd[] to polynomial form */
-         recd[i] = alpha_to[recd[i]] ;
-       else  recd[i] = 0 ;
+       if (codeword[i]!=-1)        /* convert codeword[] to polynomial form */
+         codeword[i] = alpha_to[codeword[i]] ;
+       else  codeword[i] = 0 ;
  }
-
 
 void transform(const uint8_t *msg, uint32_t *h){
 
@@ -404,3 +320,85 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
 
 }
 
+
+// This is RX of a 'code-offset' fuzzy extractor constructed by a (31,27) RS-code
+// RX receives 2 string from TX, which are 20 bytes 'ss[]' and 20 bytes 'randStr[]' below
+int main(){
+
+	register int i, j;
+	int bytepos, bitpos, idx = 0;
+		
+	int data[k], codeword[n];	//For ECC coding usage
+	int ecc[pslength];			  //stores the codeword of the nonce (nonce is randomly produced at TX side)
+	uint8_t ps[pslength] = {131, 246, 8, 140, 127, 89, 28, 247, 246, 112, 131, 97, 11, 149, 175, 197, 237, 179, 2, 0};   //stores the ps measurements at RX side(this is copied from TX when real transmission hasn't been applied)
+  //add some errors. The error tolerance depends on the ECC code used.
+  ps[0] ^= 1;
+  ps[1] ^= 1;
+  // ps[2] ^= 1;
+	uint8_t ss[pslength] = {174, 47, 93, 235, 114, 199, 12, 147, 125, 164, 238, 240, 239, 184, 203, 135, 215, 111, 14, 64};		        //stores the secure sketch sent from TX
+  uint8_t randStr[pslength] = {206, 54, 42, 155, 126, 142, 204, 209, 157, 72, 66, 96, 106, 122, 33, 102, 10, 72, 199, 216};         //stores a random string used in a strong extractor
+  uint32_t key[8];      //the final key
+
+	//PS(mismatch with the one in TX side) xor ss, the result ecc[] should be a malformed codeword (of the random nonce)
+	for(i = 0; i < pslength; i++){
+		ecc[i] = ss[i] ^ ps[i];
+	}
+
+	//For ECC decoding only. Convert the codeword from 20 bytes(8 bit each) -> 31 symbols(5 bits each)
+  //For example: [10101010, 01010101] -> [10101, 01001, 01010, 1....]
+	for(i = 0; i < n; i ++){
+		codeword[i] = 0;
+		for(j = 0; j < m; j++){
+			idx = m*i + j;
+			bytepos = idx / 8;
+			bitpos = idx % 8;
+			codeword[i] <<= 1;
+			codeword[i] ^= ((ecc[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
+		}
+	}
+
+	//Decode the RS code
+	decode_rs(codeword);
+
+	//Convert the 31 symbols(5 bits each) -> 20 bytes(8 bits each)
+  //For example: [10101, 01001, 01010, 1....] -> [10101010, 01010101]
+	for(i = 0; i < pslength; i++){
+		ecc[i] = 0;
+		for(j = 0; j < 8; j++){
+			idx = i*8 + j;
+			bytepos = idx / m;
+			bitpos = idx % m;
+			ecc[i] <<= 1;
+			if(bytepos < n){
+				ecc[i] ^= (codeword[bytepos] & (0x10 >> bitpos)) >> (4 - bitpos); 
+			}
+		}
+	}
+
+	//ss xor the corrected codeword (of the nonce), the result should be the ps values which are the same as the ones at TX side
+	for(i = 0; i < pslength; i++){
+		ss[i] ^= ecc[i];
+	}
+
+	printf("The recovered PS values::\n");
+	for(i = 0; i < pslength; i++){
+		printf("%d, ", ss[i]);
+	} 
+  printf("\n");
+
+  //Generate the 128-bit key
+  //ps values xor random string
+  for(i = 0; i < pslength; i++){
+    ss[i] ^= randStr[i];
+  }
+
+  //generate the uniformly distributed key using sha-256
+  sha256(ss, pslength, key);
+
+  //take the first 128 bits of sha-256 output as the key
+  printf("The final 128-bit key:\n");
+  for(i = 0; i < 4; i++){
+    printf("%x", key[i]);
+  }
+
+}

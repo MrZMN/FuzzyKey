@@ -4,13 +4,14 @@
 #include <stdint.h>
 #include <string.h>
 
-//parameter settings of a (n,k) RS-code
-#define m  5		// RS code over GF(2^m), each sysmbol contains m bits 
-#define n  31		// n = 2^m-1, length of codeword (symbols) 
-#define t  2 	// number of symbol errors that can be corrected
-#define k  27		// k = n-2*t, length of data (symbols) 
-#define pslength m*n/8+1	//20
-#define keylength m*k/8+1	//17
+//parameter settings of a (n,k) RS-code. n, k means num of symbols
+#define m  5        // RS code over GF(2^m), each sysmbol contains m bits 
+#define n  31       // n = 2^m-1, length of codeword (symbols) 
+#define k  27       // k = n-2*t, length of data (symbols) 
+#define t  2    // number of symbol errors that can be corrected
+
+#define pslength m*n/8+1    //20 bytes, m*n = 155 bits valid, the rest is 0
+#define keylength m*k/8+1   //17 bytes, m*k = 135 bits valid, the rest is 0
 
 //define the operations for sha-256  
 #define SHFR(x, times) (((x) >> (times)))
@@ -24,7 +25,7 @@
 #define SSIG1(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ SHFR(x, 10))
 #define SHA256_BLOCK_SIZE (512/8)
 #define SHA256_COVER_SIZE (SHA256_BLOCK_SIZE*2)
-
+//define the operations for sha-256 
 static uint32_t inisett[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -37,106 +38,25 @@ static uint32_t inisett[64] = {
 };
 
 //GF(2^m)
+//poly form
 int alpha_to [n+1] = {1, 2, 4, 8, 16, 5, 10, 20, 13, 26, 17, 7, 14, 28, 29, 31, 27, 19, 3, 6, 12, 24, 21, 15, 30, 25, 23, 11, 22, 9, 18, 0};
+//index form
 int index_of [n+1] = {-1, 0, 1, 18, 2, 5, 19, 11, 3, 29, 6, 27, 20, 8, 12, 23, 4, 10, 30, 17, 7, 22, 28, 26, 21, 25, 9, 16, 13, 14, 24, 15};
 
-void getsyndrome(int [], int []);
-void transform(const uint8_t *, uint32_t *);
-void sha256(const uint8_t *, uint32_t, uint32_t *);
-
-// This is a syndrome-based fuzzy extractor constructed by a (31,27) RS-code
-// ps is 155 bit string (in 20 bytes), which is the codeword length of the RS-code
-// All the above codes are based on (31,27) RS-code. If the ECC changes, some slight changes are required
-int main(){
-
-	srand((unsigned)time(NULL));	//for random number generation
-
-	register int i, j;
-	int bytepos, bitpos;
-	int idx = 0;
-
-	uint8_t ps[pslength];			//stores the ps measurements
-	int syndrome[2*t+1];		//stores the random encryption key
-	int codeword[n];			//For ECC coding usage
-	uint8_t randStr[pslength];			//stores the ps measurements
-	uint32_t key[8];			//the final key
-
-	//Randomly generate the ps values - first legit 155 bits in 20 bytes
-	for(i = 0; i < pslength; i++){
-		ps[i] = rand()%256;
-	}
-	ps[pslength-1] &=  0xe0;	//leave the 156-160th bits 0
-	//Randomly generate the random String - first legit 155 bits in 20 bytes
-	for(i = 0; i < pslength; i++){
-		randStr[i] = rand()%256;
-	}
-
-	//For ECC decoding only. Convert the codeword from 20 bytes(8 bit each) -> 31 symbols(5 bits each)
-	for(i = 0; i < n; i ++){
-		codeword[i] = 0;
-		for(j = 0; j < m; j++){
-			idx = m*i + j;
-			bytepos = idx / 8;
-			bitpos = idx % 8;
-			codeword[i] <<= 1;
-			codeword[i] ^= ((ps[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
-		}
-	}
-
-	//Get the syndrome/secure sketch
-	getsyndrome(syndrome, codeword);
-
-	printf("PS values: \n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ps[i]);
-	}
-	printf("\n");
-
-	printf("The random String: (copy it to Receiver.c)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", randStr[i]);
-	}
-	printf("\n");
-
-	printf("secure sketch:\n");
-	printf("%d, ", 0);
-	for(i = 1; i <= 2*t; i++){
-		printf("%d, ", syndrome[i]);
-	}
-	printf("\n");
-  	
-  	//////The next step is to send the 4 byte syndrome[] to RX
-  	//////There should be an ACK mechamism between TX and RX, such as TX sends a MAC to RX. 
-
-  	//ps values xor random string
-	for(i = 0; i < pslength; i++){
-		ps[i] ^= randStr[i];
-	}
-
-	//generate the key
-	sha256(ps, pslength, key);
-
-	//take the first 128 bits of sha-256 output as the key
-	for(i = 0; i < 4; i++){
-		printf("%x", key[i]);
-	}
-
-}
-
-
-void getsyndrome(int syndrome[], int recd[]){
-	
-	register int i, j; 
+//calculate the syndrome of a codeword[n]
+void getsyndrome(int syndrome[], int codeword[]){
+    
+    register int i, j; 
 
     for(i = 0; i < n; i++){
-     	recd[i] = index_of[recd[i]] ;          
+        codeword[i] = index_of[codeword[i]] ;          
     }
 
-   	for(i = 1; i <= n-k; i++){ 
-		syndrome[i] = 0;
-      	for(j = 0; j < n; j++)
-        	if(recd[j] != -1)
-          		syndrome[i] ^= alpha_to[(recd[j]+i*j)%n] ;      
+    for(i = 1; i <= n-k; i++){ 
+        syndrome[i] = 0;
+        for(j = 0; j < n; j++)
+            if(codeword[j] != -1)
+                syndrome[i] ^= alpha_to[(codeword[j]+i*j)%n] ;      
     } ;
 }
 
@@ -242,5 +162,87 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
     }
     
     memcpy(sha, h, sizeof(uint32_t)*8);
+
+}
+
+
+// This is TX of a syndrome-based fuzzy extractor constructed by a (31,27) RS-code
+// ps is 155 bit string (in 20 bytes), which is the codeword length of the RS-code
+// All the above codes are based on (31,27) RS-code. If the ECC changes, some slight changes are required
+int main(){
+
+	srand((unsigned)time(NULL));	//for random number generation
+
+	register int i, j;
+	int bytepos, bitpos, idx = 0;
+
+	uint8_t ps[pslength];          //stores the ps measurements at TX side
+	int syndrome[2*t+1];           //stores the syndrome of a codeword
+	int codeword[n];               //For ECC coding usage
+	uint8_t randStr[pslength];     //stores a random string used in a strong extractor
+	uint32_t key[8];               //the final key
+
+	//Randomly generate the ps values - first legit 155 bits in 20 bytes
+	for(i = 0; i < pslength; i++){
+		ps[i] = rand()%256;
+	}
+	ps[pslength-1] &=  0xe0;	//leave the 156-160th bits 0
+	//Randomly generate the random String 
+	for(i = 0; i < pslength; i++){
+		randStr[i] = rand()%256;
+	}
+
+	//For ECC decoding only. Convert the codeword from 20 bytes(8 bit each) -> 31 symbols(5 bits each)
+    //For example: [10101010, 01010101] -> [10101, 01001, 01010, 1....]
+	for(i = 0; i < n; i ++){
+		codeword[i] = 0;
+		for(j = 0; j < m; j++){
+			idx = m*i + j;
+			bytepos = idx / 8;
+			bitpos = idx % 8;
+			codeword[i] <<= 1;
+			codeword[i] ^= ((ps[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
+		}
+	}
+
+	//Get the syndrome of the codeword (regard the ps values as a codeword)
+	getsyndrome(syndrome, codeword);
+
+	printf("PS values: (copy it to Receiver)\n");
+	for(i = 0; i < pslength; i++){
+		printf("%d, ", ps[i]);
+	}
+	printf("\n");
+
+	printf("The random String: (copy it to Receiver)\n");
+	for(i = 0; i < pslength; i++){
+		printf("%d, ", randStr[i]);
+	}
+	printf("\n");
+
+	printf("secure sketch: (copy it to Receiver)\n");
+	printf("%d, ", 0);
+	for(i = 1; i <= 2*t; i++){
+		printf("%d, ", syndrome[i]);
+	}
+	printf("\n");
+  	
+  	//////The next step is to send the 4 byte syndrome[] and 20 byte randStr[] to RX
+  	//////There should be an ACK mechamism between TX and RX, such as TX sends a MAC to RX. 
+
+    //generate the uniformly distributed encryption key
+  	//ps values xor random string
+	for(i = 0; i < pslength; i++){
+		ps[i] ^= randStr[i];
+	}
+
+	//generate the key using sha-256
+	sha256(ps, pslength, key);
+
+	//take the first 128 bits of sha-256 output as the key
+    printf("The final 128-bit key:\n");
+	for(i = 0; i < 4; i++){
+		printf("%x", key[i]);
+	}
 
 }
