@@ -5,15 +5,21 @@
 #include <string.h>
 
 //parameter settings of a (n,k) RS-code. n, k means num of symbols
-#define m  5        // RS code over GF(2^m), each sysmbol contains m bits 
-#define n  31       // n = 2^m-1, length of codeword (symbols) 
-#define k  27       // k = n-2*t, length of data (symbols) 
-// #define t  2     // number of symbol errors that can be corrected
+#define m  4        // RS code over GF(2^m), each sysmbol contains m bits 
+#define n  15       // n = 2^m-1, length of codeword (symbols) 
+#define k  11       // k = n-2*t, length of data (symbols) 
+// #define t  2     // number of symbol errors that can be corrected - error rate = t/n
+#define iterationnum 128/(2*m*k) + 1
 
-#define pslength m*n/8+1    //20 bytes, m*n = 155 bits valid, the rest is 0
-#define keylength m*k/8+1   //17 bytes, m*k = 135 bits valid, the rest is 0
+//GF(2^m)
+//poly form
+uint8_t alpha_to [n+1] = {1, 2, 4, 8, 3, 6, 12, 11, 5, 10, 7, 14, 15, 13, 9, 0};
+//index form
+int8_t index_of [n+1] = {-1, 0, 1, 4, 2, 8, 5, 10, 3, 14, 9, 7, 6, 13, 11, 12};
+//generator poly of RS code
+int8_t g[n-k+1] = {10, 3, 6, 13, 0};
 
-//define the operations for sha-256  
+//define the operations for sha-256
 #define SHFR(x, times) (((x) >> (times)))
 #define ROTR(x, times) (((x) >> (times)) | ((x) << ((sizeof(x) << 3) - (times))))
 #define ROTL(x, times) (((x) << (times)) | ((x) >> ((sizeof(x) << 3) - (times))))
@@ -37,70 +43,100 @@ static uint32_t inisett[64] = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-//GF(2^m)
-//poly form
-int alpha_to [n+1] = {1, 2, 4, 8, 16, 5, 10, 20, 13, 26, 17, 7, 14, 28, 29, 31, 27, 19, 3, 6, 12, 24, 21, 15, 30, 25, 23, 11, 22, 9, 18, 0};
-//index form
-int index_of [n+1] = {-1, 0, 1, 18, 2, 5, 19, 11, 3, 29, 6, 27, 20, 8, 12, 23, 4, 10, 30, 17, 7, 22, 28, 26, 21, 25, 9, 16, 13, 14, 24, 15};
-//generator poly of RS code
-int g[n-k+1] = {10, 29, 19, 24, 0};
+//RS encoding: data[k] as input, codeword[n] as output. In each byte of codeword[] and data[], only the last m-bits are valid 
+void encode_rs(uint8_t codeword[n], uint8_t data[k]){
+    uint8_t i, j;
+    int8_t temp;
+    uint8_t b[n-k];
 
-//RS encoding: data[k] as input, codeword[n] as output. In each byte of codeword[] and data[], only the last m-bits are valid
-void encode_rs(int codeword[n], int data[k]){
-    register int i,j;
-    int temp;
-    int b[n-k];
-
-    for(i = 0; i < n-k; i++){
+    i = 0;
+    while(i != n-k){
         b[i] = 0;
+        i++;
     }
      
-    for(i = k-1; i >= 0; i--){
+    i = k;
+    do{
+        i--;
         temp = index_of[data[i]^b[n-k-1]];
         if(temp != -1){   
-            for(j=n-k-1; j>0; j--){
+            for(j = n-k-1; j > 0; j--){
                 if(g[j] != -1){
-                    b[j] = b[j-1]^alpha_to[(g[j]+temp)%n];
+                    b[j] = b[j-1] ^ alpha_to[(g[j]+temp)%n];
                 }
                 else{
                     b[j] = b[j-1];
                 }
             }
         b[0] = alpha_to[(g[0]+temp)%n];
-        }
-        else{
-            for(j=n-k-1; j>0; j--){
-                b[j] = b[j-1] ;
+        }else{
+            for(j = n-k-1; j > 0; j--){
+                b[j] = b[j-1];
             }
-            b[0] = 0 ;
+            b[0] = 0;
         }
+    }while(i != 0);
+
+    i = 0;
+    while(i != n-k){
+        codeword[i] = b[i];
+        i++;
+    }
+    i = 0;
+    while(i != k){
+        codeword[i+n-k] = data[i];
+        i++;
     }
 
-    for(i=0; i<n-k; i++){
-        codeword[i] = b[i];
-    }
-    for(i=0; i<k; i++){
-        codeword[i+n-k] = data[i];
-    } 
 } 
+
+//used for encoding when m = 4
+void encode_m_4(uint8_t codeword[n], uint8_t data[k]){
+
+    uint8_t codeword1[n], codeword2[n];
+    uint8_t data1[k], data2[k];
+
+    uint8_t i;
+
+    i = 0;
+    while(i != k){
+        data1[i] = (uint8_t)(data[i] & 0x0f);
+        data2[i] = (uint8_t)((data[i] >> 4) & 0x0f);
+        i++;
+    }
+
+    encode_rs(codeword1, data1);
+    encode_rs(codeword2, data2);
+
+    i = 0;
+    while(i != n){
+        codeword[i] = (uint8_t)((codeword2[i] << 4) | codeword1[i]);
+        i++;
+    }
+
+}
 
 void transform(const uint8_t *msg, uint32_t *h){
 
     uint32_t w[64];
     uint32_t a0, b1, c2, d3, e4, f5, g6, h7;
     uint32_t t1, t2;
- 
-    int i, j = 0;
- 
-    for (i=0; i<16; i++) {
-        w[i] = (uint32_t)msg[j]<<24 | (uint32_t)msg[j+1]<<16 | (uint32_t)msg[j+2]<<8 | msg[j+3];
+
+    uint8_t i, j = 0;
+
+    i = 0;
+    while(i != 16){
+        w[i] = (uint32_t)msg[j]<<24 | (uint32_t)msg[(uint8_t)(j+1)]<<16 | (uint32_t)msg[(uint8_t)(j+2)]<<8 | msg[(uint8_t)(j+3)];
         j += 4;
+        i++;
     }
- 
-    for(i=16; i<64; i++){
-        w[i] = SSIG1(w[i-2])+w[i-7]+SSIG0(w[i-15])+w[i-16];
+
+    i = 16;
+    while(i != 64){
+        w[i] = SSIG1(w[(uint8_t)(i-2)])+w[(uint8_t)(i-7)]+SSIG0(w[(uint8_t)(i-15)])+w[(uint8_t)(i-16)];
+        i++;
     }
- 
+
     a0 = h[0];
     b1 = h[1];
     c2 = h[2];
@@ -109,8 +145,9 @@ void transform(const uint8_t *msg, uint32_t *h){
     f5 = h[5];
     g6 = h[6];
     h7 = h[7];
- 
-    for (i= 0; i<64; i++) {
+
+    i = 0;
+    while(i != 64){
         t1 = h7 + BSIG1(e4) + CHX(e4, f5, g6) + inisett[i] + w[i];
         t2 = BSIG0(a0) + MAJ(a0, b1, c2);
         h7 = g6;
@@ -121,8 +158,10 @@ void transform(const uint8_t *msg, uint32_t *h){
         c2 = b1;
         b1 = a0;
         a0 = t1 + t2;
+        i++;
     }
- 
+
+
     h[0] += a0;
     h[1] += b1;
     h[2] += c2;
@@ -132,18 +171,18 @@ void transform(const uint8_t *msg, uint32_t *h){
     h[6] += g6;
     h[7] += h7;
 }
- 
+
 void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
 {
     uint8_t *tmp = (uint8_t*)message;
     uint8_t  cover_data[SHA256_COVER_SIZE];
     uint32_t cover_size = 0;
-    
+
     uint32_t i = 0;
     uint32_t blocknum = 0;
     uint32_t padlen = 0;
     uint32_t h[8];
- 
+
     h[0] = 0x6a09e667;
     h[1] = 0xbb67ae85;
     h[2] = 0x3c6ef372;
@@ -152,18 +191,18 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
     h[5] = 0x9b05688c;
     h[6] = 0x1f83d9ab;
     h[7] = 0x5be0cd19;
- 
+
     memset(cover_data, 0x00, sizeof(uint8_t)*SHA256_COVER_SIZE);
- 
-    blocknum = len / SHA256_BLOCK_SIZE;
+
+    blocknum = len/SHA256_BLOCK_SIZE;
     padlen = len % SHA256_BLOCK_SIZE;
- 
+
     if (padlen < 56 ) {
         cover_size = SHA256_BLOCK_SIZE;
     }else {
         cover_size = SHA256_BLOCK_SIZE*2;
     }
- 
+
     if (padlen != 0) {
         memcpy(cover_data, tmp + (blocknum * SHA256_BLOCK_SIZE), padlen);
     }
@@ -172,123 +211,91 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
     cover_data[cover_size-3]  = ((len*8)&0x00ff0000) >> 16;
     cover_data[cover_size-2]  = ((len*8)&0x0000ff00) >> 8;
     cover_data[cover_size-1]  = ((len*8)&0x000000ff);
- 
-    for (i=0; i<blocknum; i++) {
+
+    i = 0;
+    while(i != blocknum){
         transform(tmp, h);
         tmp += SHA256_BLOCK_SIZE;
+        i++;
     }
- 
+
     tmp = cover_data;
-    blocknum = cover_size / SHA256_BLOCK_SIZE;
-    for (i=0; i<blocknum; i++) {
+    blocknum = cover_size/SHA256_BLOCK_SIZE;
+
+    i = 0;
+    while(i != blocknum){
         transform(tmp, h);
         tmp += SHA256_BLOCK_SIZE;
+        i++;
     }
-    
+
     memcpy(sha, h, sizeof(uint32_t)*8);
 }
 
-// This is TX of a 'code-offset' fuzzy extractor constructed by a (31,27) RS-code
-// ps is 155 bit string (in 20 bytes)
-// All the above codes are based on (31,27) RS-code. If the ECC changes, some slight changes are required
+// This is TX of a 'code-offset' fuzzy extractor constructed by a (15,11) RS-code
+// ps - 15 bytes
+// All the above codes are based on (15,11) RS-code. If the ECC changes, some slight changes are required
 int main(){
 
-	srand((unsigned)time(NULL));	//for random number generation
+    srand((unsigned)time(NULL));    //for random number generation
 
-	register int i, j;
-	int bytepos, bitpos, idx = 0;
+    uint8_t i;
+    uint8_t nonce[k], randStr[n], ss[n];
+    uint8_t ps[n] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}; //assume we get n ps measurements (uniformly distributed random) and each measurement is one byte. Should be different at each iteration
+    uint32_t key[8];               //the final key
 
-	uint8_t ps[pslength];          //stores the ps measurements
-	int nonce[keylength];          //stores a random nonce
-	int ss[pslength];              //stores the tansmitted info from TX->RX
-	int data[k], codeword[n];      //For ECC coding usage
-	uint8_t randStr[pslength];     //stores a random string used in a strong extractor
-	uint32_t key[8];               //the final key
-
-	//Randomly generate the ps values - first legit 155 bits in 20 bytes
-	for(i = 0; i < pslength; i++){
-		ps[i] = rand()%256;
-	}
-	ps[pslength-1] &=  0xe0;	//leave the 156-160th bits 0
-	//Randomly generate a nonce - first legit 135 bits in 17 bytes
-	for(i = 0; i < keylength; i++){
-		nonce[i] = rand()%256;
-	} 
-	nonce[keylength-1] &= 0xfe;	//leave the 136th bit 0
-    //Randomly generate the random String - first legit 155 bits in 20 bytes
-    for(i = 0; i < pslength; i++){
+    //randomly generate a nonce
+    i = 0;
+    while(i != k){
+        nonce[i] = rand()%256;
+        i++;
+    }
+    //Randomly generate a random String 
+    i = 0;
+    while(i != n){
         randStr[i] = rand()%256;
+        i++;
     }
 
-	//For ECC encoding only. Convert the nonce array from 17 bytes(8 bit each) -> 27 symbols(5 bits each)
-    //For example: [10101010, 01010101] -> [10101, 01001, 01010, 1....]
-	for(i = 0; i < k; i ++){
-		data[i] = 0;
-		for(j = 0; j < m; j++){
-			idx = m*i + j;
-			bytepos = idx / 8;
-			bitpos = idx % 8;
-			data[i] <<= 1;
-			data[i] ^= ((nonce[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
-		}
-	}
+    //encode the nonce to be a codeword
+    encode_m_4(ss, nonce);
 
-	//Encoding. data(27 symbols) -> codeword(31 symbols)
-	encode_rs(codeword, data);
+    //Secure sketch = PS xor codeword(of the nonce)
+    i = 0;
+    while(i != n){
+        ss[i] ^= ps[i];
+        i++;
+    }
 
-	//For reducing the trasmission load. Convert the 31 symbols(5 bits each) -> 20 bytes(8 bits each)
-    //For example: [10101, 01001, 01010, 1....] -> [10101010, 01010101]
-	for(i = 0; i < pslength; i++){
-		ss[i] = 0;
-		for(j = 0; j < 8; j++){
-			idx = i*8 + j;
-			bytepos = idx / m;
-			bitpos = idx % m;
-			ss[i] <<= 1;
-			if(bytepos < n){
-				ss[i] ^= (codeword[bytepos] & (0x10 >> bitpos)) >> (4 - bitpos); 
-			}
-		}
-	}
+    //////The next thing is to send arrays 'ss[]' and 'randStr[]' to RX
 
-	//PS xor Codeword(of the nonce). This is the info to be transmitted
-	for( i = 0; i < pslength; i++){
-		ss[i] ^= ps[i];
-	}
+    //Generate the 128-bit key
+    //ps values xor random string - to ensure the key is totally random
+    i = 0;
+    while(i != n){
+        ps[i] ^= randStr[i];
+        i++;
+    }
 
-	printf("The PS values: (copy it to Receiver)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ps[i]);
-	}
-	printf("\n");
-	printf("secure sketch is: (copy it to Receiver)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ss[i]);
-	}
-	printf("\n");
-    printf("The random String: (copy it to Receiver)\n");
-    for(i = 0; i < pslength; i++){
+    //generate the uniformly distributed key using sha-256
+    sha256(ps, n, key);
+
+
+    printf("secure sketch: (sent to Receiver)\n");
+    for(i = 0; i < n; i++){
+        printf("%d, ", ss[i]);
+    }
+    printf("\n");
+    printf("The random String: (sent to Receiver)\n");
+    for(i = 0; i < n; i++){
         printf("%d, ", randStr[i]);
     }
     printf("\n");
-
-	//////The next thing is to send arrays 'ss[]' (20 bytes) and 'randStr[]' (20 bytes) to RX
-  	//////There should be an ACK mechamism between TX and RX, such as TX sends a MAC to RX. 
-
-    //Generate the 128-bit key
-	//ps values xor random string
-	for(i = 0; i < pslength; i++){
-		ps[i] ^= randStr[i];
-	}
-
-	//generate the uniformly distributed key using sha-256
-	sha256(ps, pslength, key);
-
-	//take the first 128 bits of sha-256 output as the key
+    //take the first 128 bits of sha-256 output as the key
     printf("The final 128-bit key:\n");
-	for(i = 0; i < 4; i++){
-		printf("%x", key[i]);
-	}
+    for(i = 0; i < 4; i++){
+        printf("%x", key[i]);
+    }
+    printf("\n");
 
 }
-

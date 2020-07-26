@@ -5,13 +5,17 @@
 #include <string.h>
 
 //parameter settings of a (n,k) RS-code. n, k means num of symbols
-#define m  5        // RS code over GF(2^m), each sysmbol contains m bits 
-#define n  31       // n = 2^m-1, length of codeword (symbols) 
-#define k  27       // k = n-2*t, length of data (symbols) 
-#define t  2    // number of symbol errors that can be corrected
+#define m  4    // RS code over GF(2^m), each sysmbol contains m bits 
+#define n  15   // n = 2^m-1, length of codeword (symbols) 
+#define k  11   // k = n-2*t, length of data (symbols) 
+#define t  2   // number of symbol errors that can be corrected - error rate = t/n
+#define iterationnum 128/(2*m*k) + 1
 
-#define pslength m*n/8+1    //20 bytes, m*n = 155 bits valid, the rest is 0
-#define keylength m*k/8+1   //17 bytes, m*k = 135 bits valid, the rest is 0
+//GF(2^m)
+//poly form
+uint8_t alpha_to [n+1] = {1, 2, 4, 8, 3, 6, 12, 11, 5, 10, 7, 14, 15, 13, 9, 0};
+//index form
+int8_t index_of [n+1] = {-1, 0, 1, 4, 2, 8, 5, 10, 3, 14, 9, 7, 6, 13, 11, 12};
 
 //define the operations for sha-256  
 #define SHFR(x, times) (((x) >> (times)))
@@ -37,46 +41,27 @@ static uint32_t inisett[64] = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-//GF(2^m)
-//poly form
-int alpha_to [n+1] = {1, 2, 4, 8, 16, 5, 10, 20, 13, 26, 17, 7, 14, 28, 29, 31, 27, 19, 3, 6, 12, 24, 21, 15, 30, 25, 23, 11, 22, 9, 18, 0};
-//index form
-int index_of [n+1] = {-1, 0, 1, 18, 2, 5, 19, 11, 3, 29, 6, 27, 20, 8, 12, 23, 4, 10, 30, 17, 7, 22, 28, 26, 21, 25, 9, 16, 13, 14, 24, 15};
-
-//calculate the syndrome of a codeword[n]
-void getsyndrome(int syndrome[], int codeword[]){
-    
-    register int i, j; 
-
-    for(i = 0; i < n; i++){
-        codeword[i] = index_of[codeword[i]] ;          
-    }
-
-    for(i = 1; i <= n-k; i++){ 
-        syndrome[i] = 0;
-        for(j = 0; j < n; j++)
-            if(codeword[j] != -1)
-                syndrome[i] ^= alpha_to[(codeword[j]+i*j)%n] ;      
-    } ;
-}
-
 void transform(const uint8_t *msg, uint32_t *h){
 
     uint32_t w[64];
     uint32_t a0, b1, c2, d3, e4, f5, g6, h7;
     uint32_t t1, t2;
- 
-    int i, j = 0;
- 
-    for (i=0; i<16; i++) {
-        w[i] = (uint32_t)msg[j]<<24 | (uint32_t)msg[j+1]<<16 | (uint32_t)msg[j+2]<<8 | msg[j+3];
+
+    uint8_t i, j = 0;
+
+    i = 0;
+    while(i != 16){
+        w[i] = (uint32_t)msg[j]<<24 | (uint32_t)msg[(uint8_t)(j+1)]<<16 | (uint32_t)msg[(uint8_t)(j+2)]<<8 | msg[(uint8_t)(j+3)];
         j += 4;
+        i++;
     }
- 
-    for(i=16; i<64; i++){
-        w[i] = SSIG1(w[i-2])+w[i-7]+SSIG0(w[i-15])+w[i-16];
+
+    i = 16;
+    while(i != 64){
+        w[i] = SSIG1(w[(uint8_t)(i-2)])+w[(uint8_t)(i-7)]+SSIG0(w[(uint8_t)(i-15)])+w[(uint8_t)(i-16)];
+        i++;
     }
- 
+
     a0 = h[0];
     b1 = h[1];
     c2 = h[2];
@@ -85,8 +70,9 @@ void transform(const uint8_t *msg, uint32_t *h){
     f5 = h[5];
     g6 = h[6];
     h7 = h[7];
- 
-    for (i= 0; i<64; i++) {
+
+    i = 0;
+    while(i != 64){
         t1 = h7 + BSIG1(e4) + CHX(e4, f5, g6) + inisett[i] + w[i];
         t2 = BSIG0(a0) + MAJ(a0, b1, c2);
         h7 = g6;
@@ -97,8 +83,10 @@ void transform(const uint8_t *msg, uint32_t *h){
         c2 = b1;
         b1 = a0;
         a0 = t1 + t2;
+        i++;
     }
- 
+
+
     h[0] += a0;
     h[1] += b1;
     h[2] += c2;
@@ -108,18 +96,18 @@ void transform(const uint8_t *msg, uint32_t *h){
     h[6] += g6;
     h[7] += h7;
 }
- 
+
 void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
 {
     uint8_t *tmp = (uint8_t*)message;
     uint8_t  cover_data[SHA256_COVER_SIZE];
     uint32_t cover_size = 0;
-    
+
     uint32_t i = 0;
     uint32_t blocknum = 0;
     uint32_t padlen = 0;
     uint32_t h[8];
- 
+
     h[0] = 0x6a09e667;
     h[1] = 0xbb67ae85;
     h[2] = 0x3c6ef372;
@@ -128,18 +116,18 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
     h[5] = 0x9b05688c;
     h[6] = 0x1f83d9ab;
     h[7] = 0x5be0cd19;
- 
+
     memset(cover_data, 0x00, sizeof(uint8_t)*SHA256_COVER_SIZE);
- 
-    blocknum = len / SHA256_BLOCK_SIZE;
+
+    blocknum = len/SHA256_BLOCK_SIZE;
     padlen = len % SHA256_BLOCK_SIZE;
- 
+
     if (padlen < 56 ) {
         cover_size = SHA256_BLOCK_SIZE;
     }else {
         cover_size = SHA256_BLOCK_SIZE*2;
     }
- 
+
     if (padlen != 0) {
         memcpy(cover_data, tmp + (blocknum * SHA256_BLOCK_SIZE), padlen);
     }
@@ -148,101 +136,133 @@ void sha256(const uint8_t *message, uint32_t len, uint32_t *sha)
     cover_data[cover_size-3]  = ((len*8)&0x00ff0000) >> 16;
     cover_data[cover_size-2]  = ((len*8)&0x0000ff00) >> 8;
     cover_data[cover_size-1]  = ((len*8)&0x000000ff);
- 
-    for (i=0; i<blocknum; i++) {
+
+    i = 0;
+    while(i != blocknum){
         transform(tmp, h);
         tmp += SHA256_BLOCK_SIZE;
+        i++;
     }
- 
+
     tmp = cover_data;
-    blocknum = cover_size / SHA256_BLOCK_SIZE;
-    for (i=0; i<blocknum; i++) {
+    blocknum = cover_size/SHA256_BLOCK_SIZE;
+
+    i = 0;
+    while(i != blocknum){
         transform(tmp, h);
         tmp += SHA256_BLOCK_SIZE;
+        i++;
     }
-    
+
     memcpy(sha, h, sizeof(uint32_t)*8);
+}
+
+//calculate the syndrome of a codeword[n]
+void getsyndrome(uint8_t syndrome[], int8_t codeword[]){
+    
+    uint8_t i, j; 
+
+    i = 0;
+    while(i != n){
+        codeword[i] = index_of[codeword[i]]; 
+        i++;
+    }
+
+    syndrome[0] = 0;
+
+    i = 1;
+    while(i != n-k+1){
+        syndrome[i] = 0;
+        j = 0;
+        while(j != n){
+            if(codeword[j] != -1){
+                syndrome[i] ^= alpha_to[(codeword[j]+i*j)%n];  
+            }
+            j++;
+        }
+        i++;
+    }
+
+}
+
+//used for encoding when m = 4
+void getsyndrome_m_4(uint8_t codeword[n], uint8_t syndrome[2*t+1]){
+
+    int8_t codeword1[n], codeword2[n];
+    uint8_t syndrome1[2*t+1], syndrome2[2*t+1];
+
+    uint8_t i;
+
+    i = 0;
+    while(i != n){
+        codeword1[i] = (int8_t)(codeword[i] & 0x0f);
+        codeword2[i] = (int8_t)((codeword[i] >> 4) & 0x0f);
+        i++;
+    }
+
+    getsyndrome(syndrome1, codeword1);
+    getsyndrome(syndrome2, codeword2);
+
+    i = 0;
+    while(i != 2*t+1){
+        syndrome[i] = ((syndrome2[i] << 4) | syndrome1[i]);
+        i++;
+    }
 
 }
 
 
-// This is TX of a syndrome-based fuzzy extractor constructed by a (31,27) RS-code
-// ps is 155 bit string (in 20 bytes), which is the codeword length of the RS-code
-// All the above codes are based on (31,27) RS-code. If the ECC changes, some slight changes are required
+// This is TX of a syndrome-based fuzzy extractor constructed by a (15,11) RS-code
+// ps - 15 bytes
+// All the above codes are based on (15,11) RS-code. If the ECC changes, some slight changes are required
 int main(){
 
-	srand((unsigned)time(NULL));	//for random number generation
+    srand((unsigned)time(NULL));    //for random number generation
 
-	register int i, j;
-	int bytepos, bitpos, idx = 0;
+    uint8_t i;
+    uint8_t randStr[n], ss[n];
+    uint8_t ps[n] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}; //assume we get n ps measurements (uniformly distributed random) and each measurement is one byte. Should be different at each iteration
+    uint32_t key[8];            //the final key
+    uint8_t syndrome[2*t+1];    //stores the syndrome of a codeword
 
-	uint8_t ps[pslength];          //stores the ps measurements at TX side
-	int syndrome[2*t+1];           //stores the syndrome of a codeword
-	int codeword[n];               //For ECC coding usage
-	uint8_t randStr[pslength];     //stores a random string used in a strong extractor
-	uint32_t key[8];               //the final key
+    //Get the syndrome of the codeword (regard the ps values as a codeword)
+    getsyndrome_m_4(ps, syndrome);
 
-	//Randomly generate the ps values - first legit 155 bits in 20 bytes
-	for(i = 0; i < pslength; i++){
-		ps[i] = rand()%256;
-	}
-	ps[pslength-1] &=  0xe0;	//leave the 156-160th bits 0
-	//Randomly generate the random String 
-	for(i = 0; i < pslength; i++){
-		randStr[i] = rand()%256;
-	}
+    //Randomly generate a random String 
+    i = 0;
+    while(i != n){
+        randStr[i] = rand()%256;
+        i++;
+    }
 
-	//For ECC decoding only. Convert the codeword from 20 bytes(8 bit each) -> 31 symbols(5 bits each)
-    //For example: [10101010, 01010101] -> [10101, 01001, 01010, 1....]
-	for(i = 0; i < n; i ++){
-		codeword[i] = 0;
-		for(j = 0; j < m; j++){
-			idx = m*i + j;
-			bytepos = idx / 8;
-			bitpos = idx % 8;
-			codeword[i] <<= 1;
-			codeword[i] ^= ((ps[bytepos] & (0x80 >> bitpos)) >> (7 - bitpos));
-		}
-	}
+    printf("Secure sketch: (sent to Receiver)\n");
+    for(i = 0; i < 2*t+1; i++){
+      printf("%d, ", syndrome[i]);
+    }
+    printf("\n");
 
-	//Get the syndrome of the codeword (regard the ps values as a codeword)
-	getsyndrome(syndrome, codeword);
+    printf("The random String: (sent to Receiver)\n");
+    for(i = 0; i < n; i++){
+        printf("%d, ", randStr[i]);
+    }
+    printf("\n");
 
-	printf("PS values: (copy it to Receiver)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", ps[i]);
-	}
-	printf("\n");
+    //Generate the 128-bit key
+    //ps values xor random string - to ensure the key is totally random
+    i = 0;
+    while(i != n){
+        ps[i] ^= randStr[i];
+        i++;
+    }
 
-	printf("The random String: (copy it to Receiver)\n");
-	for(i = 0; i < pslength; i++){
-		printf("%d, ", randStr[i]);
-	}
-	printf("\n");
+    //generate the uniformly distributed key using sha-256
+    sha256(ps, n, key);
 
-	printf("secure sketch: (copy it to Receiver)\n");
-	printf("%d, ", 0);
-	for(i = 1; i <= 2*t; i++){
-		printf("%d, ", syndrome[i]);
-	}
-	printf("\n");
-  	
-  	//////The next step is to send the 4 byte syndrome[] and 20 byte randStr[] to RX
-  	//////There should be an ACK mechamism between TX and RX, such as TX sends a MAC to RX. 
-
-    //generate the uniformly distributed encryption key
-  	//ps values xor random string
-	for(i = 0; i < pslength; i++){
-		ps[i] ^= randStr[i];
-	}
-
-	//generate the key using sha-256
-	sha256(ps, pslength, key);
-
-	//take the first 128 bits of sha-256 output as the key
+    //take the first 128 bits of sha-256 output as the key
     printf("The final 128-bit key:\n");
-	for(i = 0; i < 4; i++){
-		printf("%x", key[i]);
-	}
+    for(i = 0; i < 4; i++){
+        printf("%x", key[i]);
+    }
+    printf("\n");
 
 }
