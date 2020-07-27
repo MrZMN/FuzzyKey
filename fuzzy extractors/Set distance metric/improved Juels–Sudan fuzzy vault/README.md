@@ -21,7 +21,7 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 
 ### Details
 
-- The error tolerance t means the max tolerable set difference between PS and PS'. For instance, the set difference between {1,2,3} and {2,3,4} is 2.
+- The error tolerance t means the max tolerable set difference between PS and PS'. For instance, the set difference between {1,2,3} and {2,3,4} is {1,4}.
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Security Level
