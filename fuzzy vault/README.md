@@ -32,3 +32,6 @@ According to the current codes, for each point (x,y), both x and y consist of 1 
 
 ### Security Level
 
+Suppose the number of legit points is l, the number of chaff points is c, the number of key polynomial coefficients is p (polynomial degree is p-1). According to Berlekamp-Welch algorithm, the key polynomial could be successfully recovered if RX recognises at least (l+p)/2 legit points from all the points transmitted from TX.  
+
+Suppose we use (a, b) to represent the number of combinations when choosing b elements randomly from a elements without puting back. Then the upper bound of the adversary's attempt should be: (l+c, (l+p)/2) / (l, (l+p)/2). For instance, we generate a 7-degree key polynomial, take 10 legit points (allow at most 10% mismatch rate on PS measurement) and 2000 chaff points at TX side, the security level should be at most: (2010, 9)/(10, 9), which is roughly about 2^77. The best way to increase security is to increase the number of chaff points.
