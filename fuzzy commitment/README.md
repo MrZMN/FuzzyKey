@@ -17,6 +17,8 @@ Based on the paper 'A Fuzzy Commitment Scheme' by Juels & Wattenberg
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
 
+![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/fuzzycommitment.png)
+
 ### Details
 - We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc. The choice of ECC code should follow these conditions: The error tolerance ability should be related with the PS inequality; the device ability, such as memory, energy consumption should be concerned; the type of PS mismatches, such as consecutive or random, should be concerned.
 - In the above implementation, errors on wireless channel wasn't concerned. 
