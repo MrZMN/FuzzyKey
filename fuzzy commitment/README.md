@@ -22,7 +22,7 @@ Based on the paper 'A Fuzzy Commitment Scheme' by Juels & Wattenberg
 - In the above implementation, errors on wireless channel wasn't concerned. 
 
 ### Security level
-
+If the extracted PS string is uniformly distributed random, the transmitted fuzzy commitment could be regarded as one time pad, which is completely secure. The security level isn't relevant to the parameter settings of ECC.
 
 
 
