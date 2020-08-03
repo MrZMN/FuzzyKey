@@ -25,7 +25,7 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 
 ### Details
 
-- The error tolerance t means the max tolerable set difference between PS and PS'. For instance, the set difference between {1,2,3} and {2,3,4} is {1,4}.
+- The error tolerance t means the max tolerable symmetric difference between PS and PS'. For instance, the symmetric difference between {1,2,3} and {2,3,4} is {1,4}.
 - This construction is based on binary BCH code only. The choice of BCH algorithm is based on: The computation of BCH code should follow the PS element characteristic, i.e. codeword size n of BCH code should be 2^8-1 when each PS element consists of 8 bits. 
 - In the above implementation, errors on wireless channel wasn't concerned.
 
