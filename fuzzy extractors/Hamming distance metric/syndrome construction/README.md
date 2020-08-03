@@ -24,3 +24,7 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Security Level
+
+The transmitted syndrome is calculated based on the extracted PS string (regarded as a codeword). For instance, based on (n,k) BCH code and n-bit PS string, we regard the PS string as a n-1 degree polynomial (each bit corresponds to one coefficient of the polynomial), then 2t-length syndrome is calculated as: syn[i] = r(a^i), where a^i belongs to GF(2^m).  
+
+Therefore, the security of this method is based on the length of the randomly distributed PS string. For a (n,k) BCH code, the security level should be at most 2^n; for a (n,k) RS code, the security level should be at most 2^(m\*n), where n = 2^m-1. 
