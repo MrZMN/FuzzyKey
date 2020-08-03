@@ -25,3 +25,7 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Security Level
+
+The transmitted secure sketch ss is calculated based on the PS set. Precisely speaking, suppose we have a n-element set s, each element of the secure sketch is calculated as: ss[i] = sum(comb(s, i+1)), i from 0 to t-1, where comb(s, i+1) means all the different combinations of taking i+1 elements from set s.
+
+Therefore, the security of this method is based on the size of PS set. Suppose each element of the set comes from GF(2^8), the security level should be at most 2^(8\*n).
