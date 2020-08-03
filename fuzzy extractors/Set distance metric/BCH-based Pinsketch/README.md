@@ -21,6 +21,8 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
 
+![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/Pinsketchextractor.png)
+
 ### Details
 
 - The error tolerance t means the max tolerable set difference between PS and PS'. For instance, the set difference between {1,2,3} and {2,3,4} is {1,4}.
