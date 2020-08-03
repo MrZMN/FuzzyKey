@@ -25,7 +25,7 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 
 ### Details
 
-- The error tolerance t means the max tolerable set difference between PS and PS'. For instance, the set difference between {1,2,3} and {2,3,4} is 2.
+- The error tolerance t means the max tolerable symmetric difference between PS and PS'. For instance, the symmetric difference between {1,2,3} and {2,3,4} is {1,4}.
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Adjustments Needed for Embedded Systems
