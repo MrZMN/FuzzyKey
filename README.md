@@ -20,6 +20,10 @@ Since our work is mainly benchmark, we need to restrict several assumptions for 
 1. We only focus on key distribution on two devices, namely, all the methods work on a TX and a RX. By our implementation, we will also give a clear conclusion about: TX or RX is more suitable for the resouce-restricted device, depending on the resource consumptions we measure, such as energy consumption. Actually, this is also one of the targets of this research, because we haven't seen papers giving clear info like, the IMD should be TX when fuzzy vault is used because TX consumes less energy than RX.
 2. We will not measure PS for real. Instead, we assume the devices could already easily measure different PSs, for instance, some may measure IPIs (time difference between two ECG pulses) while some may measure some other PS. We also assume the devices have the abilities such as generating random numbers, converting the analog signals into digital bit strings, etc.
 
+#### Our device
+
+We use TI MSP430FR5994 launchpad as the simulator device for our experiments. It obtains 16-bit CPU, 16KB RAM and 128KB flash. Besides, it's specified designed for low power computation. We think this device is suitable to simulate the hardware used in body-area (or specifically, medical devices).
+
 #### For algorithms
 1. The target of each method is the same: distribute a secure 128-bit key on both devices.
 2. All methods chosen must be secure in IMD&programmer scenrio and well accepted by security communities. And the methods implemented should provide similar level of security. For instance, different methods/extractors will all cause entropy loss - but different amounts. Based on the same entropy got at the end, the initial entropy contained in PS data might be different.  
