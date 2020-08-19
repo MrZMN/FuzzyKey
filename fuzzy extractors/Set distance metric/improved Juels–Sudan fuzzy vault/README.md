@@ -19,7 +19,7 @@ We could measure the PS values and generate a set based on them. Each set elemen
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
 
-![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/improvedJSextractor.png)
+![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/Improved%20J-S%20fuzzy%20extractor.png)
 
 ### Details
 
