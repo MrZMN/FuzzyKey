@@ -7,20 +7,24 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't aim to conceal and transmit the key itself in the transmission procedure. Indeed, its target is only to correct the mismatches on PS measurements at TX/RX, which is called 'secure sketch' in their work. Afterwards, both sides use the same PS as the input of a strong random extractor, which outputs a uniformly distributed key. Besides, fuzzy extractor contains different constructions, which are based on different metrics of the PS.
 
 The main protocol could be described briefly:
-- TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously. Some fuzzy extractors need PS in bit string form, while others just need the set format.
-- TX does some operations to conceal the PS values (some methods like ECC needed).
-- TX transmits the concealed PS and a random string to RX over the wireless channel. 
-- RX receives the info. It provides PS' and does some operations to recover PS' = PS.
-- RX uses a strong random extractor (a SHA-256 could be used) to generate a uniformly distributed key. PS and random string are the inputs of the extractor.
+- TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously. A bit string or set will be generated.
+- TX does some operations to generate a message, which is called secure sketch, based on its measurement PS.
+- TX transmits the secure sketch to RX over the wireless channel. 
+- RX receives the secure sketch. It provides its measurement PS' and does some operations to recover PS' = PS.
+- Both TX/RX use the same strong random extractor (i.e. a secure hash method) to generate a uniformly distributed key. The agreed PS is the input of the extractor.
 
 - Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX
 
 The 'operations' mentioned above depend on the exact constructions.
 
+### Strong Extractor
+
+A strong extractor is used to extract uniformly distributed randomness from arbitrary-length input. In our experiments, we use a secure AES-based hashing method as the strong extractor. If the input (agreed PS) of the hash has at least 128-bit entropy and the hash itself is secure, then it's secure to use the first 128-bit of the hash output as an encryption key.
+
 ### Security Level
 
-Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't use physiological signals to conceal the secret key. Instead, the key comes from the PS itself. The main idea is to recover the mismatch on the PS measurements at TX/RX, then exact uniformly distributed random key from the agreed PS.
+Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't use physiological signals to conceal the secret key. Instead, the key is extracted from the PS itself. The main idea is to recover the mismatch on the PS measurements at TX/RX, then exact uniformly distributed random key from the agreed PS.
 
-Therefore, the security is ensured if the original entropy of PS measured by both sides is high enough. Precisely, the remaining entropy of agreed PS should be at least 128-bit, considering the entropy loss due to transmission/storage of public information.
+Therefore, the security is ensured if the original entropy of the measured PS at both sides is high enough. Precisely, the remaining entropy of agreed PS should be at least 128-bit, considering the entropy loss due to transmission/storage of public information.
 
-For the Hamming-distance based fuzzy extractors, the original PS entropy is the same as the length of the extracted PS bit string. For the set-distance based fuzzy extractors, suppose the universe size is n, the set size is s, then the original entropy is log(n,s) with base 2, where (n,s) stands for the number of combinations when taking random s elements from n elements without putting them back.
+For the Hamming-distance based fuzzy extractors, the original PS entropy is the same as the length of the extracted PS bit string. For the set-distance based fuzzy extractors, suppose the universe size is n, the set size is s, then the original entropy is log(n,s) with base 2, where (n,s) stands for the number of combinations when taking random s elements from n elements without putting back.
