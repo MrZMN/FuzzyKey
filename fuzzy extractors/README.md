@@ -19,7 +19,7 @@ The 'operations' mentioned above depend on the exact constructions.
 
 ### Strong Extractor
 
-A strong extractor is used to extract uniformly distributed randomness from arbitrary-length input. In our experiments, we use a secure AES-based hashing method as the strong extractor. If the input (agreed PS) of the hash has at least 128-bit entropy and the hash itself is secure, then it's secure to use the first 128-bit of the hash output as an encryption key.
+A strong extractor is used to extract uniformly distributed randomness from arbitrary-length input. In our experiments, we use a secure AES-based hashing method as the strong extractor. If the input of the hash (agreed PS) has at least 128-bit entropy and the hash itself is secure, then it's secure to use the first 128-bit of the hash output as an encryption key.
 
 ### Security Level
 
