@@ -7,15 +7,15 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 2. The devices using this protocol are able to send/receive quite much information through wireless channel.
 
 ### Protocol Description
-- TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the number of ps measurements required).
-- Both TX/RX should measure a set of PS values (suppose we collect n PS measurements at both TX/RX sides) as PS and PS'. These two sets should be very similar. Considering that we need a 128-bit key, n should be more than 16 if each PS value consists of 8 bits.
-- TX generates a random 128-bit key, then devides the key into 16 pieces of 8 bits, regarding them as coefficients of a 15-degree polynomial p(x). 
-- TX projects the n PS values onto the polynomial p(x), resulting n legit points.
-- TX generates a large number (>>n) of chaff points to conceal the legit points. The chaff points (x,y) should meet these conditions: 1. x is different from elements in PS. 2. y is not on the polynomial (y != p(x)). 
+- TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the set size required).
+- TX/RX generate a set based PS measurements (suppose the set size is s) as PS and PS'. These two sets should be very similar. 
+- TX generates a purely random 128-bit key, then devides the key into k equal-size sections, regarding them as coefficients of a (k-1)-degree polynomial p(x). 
+- TX projects the s set elements onto p(x), resulting s legit points.
+- TX generates a large number (>>s) of chaff points to conceal the legit points. The chaff points (x,y) should meet two conditions: 1. x is different from elements in PS. 2. y is not on the polynomial (y != p(x)). 
 - TX mixes legit points and chaff points together randomly. 
 - TX sends all the points to RX through the wireless channel.
 - RX receives all the points. 
-- RX compares the measurements in PS' with all the x values of received points. If matched, RX regards this point as a legit point (with high probability to be a legit point).
+- RX compares the elements in PS' with all the x values of received points. If matched, RX regards this point as a legit point.
 - After collecting all legit points, the key polynomial p(x) could be recovered using Berlecamp-Welch algorithm, if the mismatch rate between PS and PS' is tolerable.
 - RX converts the polynomial coefficients into a 128-bit key by concatenating them together.
 
@@ -25,7 +25,7 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 
 ### Details
 
-- The error tolerance t means the max tolerable symmetric difference between PS and PS'. For instance, the symmetric difference between {1,2,3} and {2,3,4} is {1,4}.
+- The error tolerance t means the max tolerable symmetric difference size between PS and PS'. For instance, the symmetric difference size between {1,2,3} and {2,3,4} is 2.
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Adjustments Needed for Embedded Systems
