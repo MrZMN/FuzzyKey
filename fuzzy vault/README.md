@@ -8,7 +8,7 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 
 ### Protocol Description
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the set size required).
-- TX/RX generate a set based PS measurements (suppose the set size is s) as PS and PS'. These two sets should be very similar. 
+- TX/RX each generates a set based on PS measurements (suppose the set size is s) as PS and PS'. These two sets should be very similar. 
 - TX generates a purely random 128-bit key, then devides the key into k equal-size sections, regarding them as coefficients of a (k-1)-degree polynomial p(x). 
 - TX projects the s set elements onto p(x), resulting s legit points.
 - TX generates a large number (>>s) of chaff points to conceal the legit points. The chaff points (x,y) should meet two conditions: 1. x is different from elements in PS. 2. y is not on the polynomial (y != p(x)). 
