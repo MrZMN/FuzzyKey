@@ -3,7 +3,7 @@
 Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRICS AND OTHER NOISY DATA' by DODIS, etc. (2008 edited version)
 
 ### Assumptions
-1. We could not only measure the PS values, but could generate a hundreds-bit long string from the PS measurements. The string length should be the same as the overall codeword (encoded key using ECC) length. For example, if we use (255,131) BCH code, we'll need a 255-bit PS string.
+We could measure the PS, then generate a uniformly distirbuted random hundred-bit string from the PS measurements.
 
 ### Protocol Description
 
