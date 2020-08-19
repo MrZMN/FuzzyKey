@@ -3,7 +3,7 @@
 Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRICS AND OTHER NOISY DATA' by DODIS, etc. (2008 edited version)
 
 ### Assumptions
-We could measure the PS, then generate a uniformly distirbuted random hundred-bit string from the PS measurements.
+We could measure the PS, then generate a random hundred-bit string from the PS measurements.
 
 ### Protocol Description
 
