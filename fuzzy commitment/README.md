@@ -3,7 +3,7 @@
 Based on the paper 'A Fuzzy Commitment Scheme' by Juels & Wattenberg
 
 ### Assumptions
-1. We could not only measure the PS values, but could generate a hundreds-bit long string from the PS measurements. The string length should be the same as the overall codeword (encoded key using ECC) length. For example, if we use (255,131) BCH code, we'll get one 255-bit codeword, so we need a 255-bit PS string.
+We could measure the PS, then generate a uniformly distirbuted random hundred-bit string from the PS measurements. 
 
 ### Protocol Description
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the ps string length required).
