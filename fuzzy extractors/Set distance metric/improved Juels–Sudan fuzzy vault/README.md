@@ -23,7 +23,7 @@ We could measure the PS values and generate a set based on them. Each set elemen
 
 ### Details
 
-- The error tolerance t means the max tolerable symmetric difference between PS and PS'. For instance, the symmetric difference between {1,2,3} and {2,3,4} is {1,4}.
+- The error tolerance t means the max tolerable symmetric difference size between PS and PS'. For instance, the symmetric difference size between {1,2,3} and {2,3,4} is 2.
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Security Level
