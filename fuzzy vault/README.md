@@ -3,7 +3,7 @@
 Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 
 ### Assumptions
-1. We could measure the PS values. Each collected PS measurements should be different from each other.
+1. We could measure the PS values and generate a set based on them. Each set element should be different from each other.
 2. The devices using this protocol are able to send/receive quite much information through wireless channel.
 
 ### Protocol Description
