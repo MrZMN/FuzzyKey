@@ -21,7 +21,7 @@ We could measure the PS, then generate a random hundred-bit string from the PS m
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
 
-![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/codeoffsetextractor.png)
+![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/Code-offset%20fuzzy%20extractor.png)
 
 ### Details
 
