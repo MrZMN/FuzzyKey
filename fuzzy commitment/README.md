@@ -20,7 +20,8 @@ We could measure the PS, then generate a uniformly distirbuted random hundred-bi
 ![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/fuzzycommitment.png)
 
 ### Details
-- We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc. - The choice of ECC code should follow these conditions: 1. the error tolerance ability should be related with the PS mismatch. 2. the device ability, such as memory, energy consumption should be concerned. 3. the type of PS mismatches, such as consecutive or random, should be concerned.
+- We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc.
+- The choice of ECC code should follow these conditions: 1. the error tolerance ability should be related with the PS mismatch. 2. the device ability, such as memory, energy consumption should be concerned. 3. the type of PS mismatches, such as consecutive or random, should be concerned.
 - In the above implementation, errors on wireless channel wasn't concerned. 
 
 ### Security level
