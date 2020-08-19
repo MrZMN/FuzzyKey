@@ -17,7 +17,7 @@ We could measure the PS, then generate a uniformly distirbuted random hundred-bi
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
 
-![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/fuzzycommitment.png)
+![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/Fuzzy%20commitment.png)
 
 ### Details
 - We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc.
