@@ -22,3 +22,5 @@ The 'operations' mentioned above depend on the exact constructions.
 Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't use physiological signals to conceal the secret key. Instead, the key comes from the PS itself. The main idea is to recover the mismatch on the PS measurements at TX/RX, then exact uniformly distributed random key from the agreed PS.
 
 Therefore, the security is ensured if the original entropy of PS measured by both sides is high enough. Precisely, the remaining entropy of agreed PS should be at least 128-bit, considering the entropy loss due to transmission/storage of public information.
+
+For the Hamming-distance based fuzzy extractors, the original PS entropy is the same as the length of the extracted PS bit string. For the set-distance based fuzzy extractors, suppose the universe size is n, the set size is s, then the original entropy is log(n,s) with base 2, where (n,s) stands for the number of combinations when taking random s elements from n elements without putting them back.
