@@ -4,7 +4,7 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 
 ### Protocol Description
 
-Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't aim to conceal and transmit the key itself in the transmission procedure. Indeed, its target is only to ensure both sides have the same PS, which is called 'secure sketch' in their work. Afterwards, both sides use the equal PS as the input of a strong random extractor, which outputs a uniformly distributed key. Besides, fuzzy extractor contains different constructions, which are based on different metrics of the PS.
+Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't aim to conceal and transmit the key itself in the transmission procedure. Indeed, its target is only to correct the mismatches on PS measurements at TX/RX, which is called 'secure sketch' in their work. Afterwards, both sides use the same PS as the input of a strong random extractor, which outputs a uniformly distributed key. Besides, fuzzy extractor contains different constructions, which are based on different metrics of the PS.
 
 The main protocol could be described briefly:
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously. Some fuzzy extractors need PS in bit string form, while others just need the set format.
