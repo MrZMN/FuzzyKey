@@ -9,8 +9,8 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 ### Protocol Description
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the set size required).
 - TX/RX each generates a set based on PS measurements (suppose the set size is s) as PS and PS'. These two sets should be very similar. 
-- TX generates a purely random 128-bit key, then devides the key into k equal-size sections, regarding them as coefficients of a (k-1)-degree polynomial p(x). 
-- TX projects the s set elements onto p(x), resulting s legit points.
+- TX generates a purely random 128-bit key, then devides the key into k equal-size sections, regarding them as coefficients of a (k-1)-degree polynomial p(x). k should be smaller than s.
+- TX projects the s set elements onto p(x), resulting s legit points. 
 - TX generates a large number (>>s) of chaff points to conceal the legit points. The chaff points (x,y) should meet two conditions: 1. x is different from elements in PS. 2. y is not on the polynomial (y != p(x)). 
 - TX mixes legit points and chaff points together randomly. 
 - TX sends all the points to RX through the wireless channel.
@@ -30,7 +30,7 @@ Based on the paper 'A Fuzzy Vault Scheme' by Juels & Sudan
 
 ### Adjustments Needed for Embedded Systems
 
-According to the current codes, for each point (x,y), both x and y consist of 1 byte. This means each point corresponds to 2 bytes. Considering there'll be thousands of points to be sent/received for security concern, it's impossible for a 2KB memory embedded system to generate/send the points in one time. It's feasible to do this in batches, namely, TX generates and sends hundreds of points at a time for several times, and the same for RX.
+According to the current codes, for each point (x,y), both x and y consist of at least 1 byte. This means each point contains at least 2 bytes. Considering there'll be thousands of points to be sent/received for security concern, it might be impossible for a memory-restricted embedded system to generate/send the points in one time. It's feasible to do this in batches, namely, TX generates and sends hundreds of points at a time for several times, and the same for RX.
 
 ### Security Level
 
