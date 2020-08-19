@@ -3,7 +3,7 @@
 Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRICS AND OTHER NOISY DATA' by DODIS, etc. (2008 edited version)
 
 ### Assumptions
-1. We could measure the PS values. (Assume each PS measurement is one byte) Each collected PS measurements should be different from each other.
+We could measure the PS values and generate a set based on them. Each set element should be different from each other.
 
 ### Protocol Description
 
