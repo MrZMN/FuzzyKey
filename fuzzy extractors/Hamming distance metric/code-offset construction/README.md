@@ -29,4 +29,5 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 - In the above implementation, errors on wireless channel wasn't concerned.
 
 ### Security Level
-If the extracted PS string is uniformly distributed random, the transmitted fuzzy commitment could be regarded as one time pad, which is completely secure. The security level isn't relevant to the parameter settings of ECC.
+
+Suppose we use (n,k) ECC, each symbol consists of f bits, and we need b blocks in total. The entropy loss is (n-k)\*f\*b. 
