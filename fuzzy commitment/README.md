@@ -8,7 +8,7 @@ We could measure the PS, then generate a uniformly distirbuted random hundred-bi
 ### Protocol Description
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the ps string length required).
 - Both devices convert the PS analog signal to n-bit uniformly distirbuted random strings PS and PS'. These two strings should be very similar. 
-- TX generates a purely random 128-bit string (may add some zero paddings), then encodes it to be one/many codewords c using error correction code. The whole length of the codeword(s) should be n-bit. 
+- TX generates a purely random 128-bit key (may add some zero paddings), then encodes it to be one/many codewords c using error correction code. The whole length of the codeword(s) should be n-bit. 
 - TX computes δ = c xor PS.
 - TX sends δ to RX over the wireless channel. 
 - RX received δ.
