@@ -18,7 +18,7 @@ We could measure the PS, then generate a hundred-bit string from the PS measurem
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
 
-![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/syndromeextractor.png)
+![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/Syndrome-based%20fuzzy%20extractor.png)
 
 ### Details
 
