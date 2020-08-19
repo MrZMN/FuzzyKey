@@ -7,12 +7,12 @@ We could measure the PS, then generate a uniformly distirbuted random hundred-bi
 
 ### Protocol Description
 - TX and RX synchronise with each other, and measure the same PS for a period of time simultaneously (time depends on the ps string length required).
-- Suppose we use (n,k) binary BCH code. Both devices convert the PS analog signal to n-bit strings PS and PS'. These two strings should be very similar. 
-- TX generates a purely random 128-bit string (may add some zero paddings on it to be k-length), then encodes it to be a n-bit codeword c using error correction code. 
+- Both devices convert the PS analog signal to n-bit uniformly distirbuted random strings PS and PS'. These two strings should be very similar. 
+- TX generates a purely random 128-bit string (may add some zero paddings), then encodes it to be one/many codewords c using error correction code. The whole length of the codeword(s) should be n-bit. 
 - TX computes δ = c xor PS.
 - TX sends δ to RX over the wireless channel. 
 - RX received δ.
-- RX calculates codeword c' = PS' xor δ = PS' xor c xor PS. c' should be different from c because of the inequality between PS and PS'. 
+- RX calculates codeword c' = PS' xor δ = PS' xor c xor PS. c' should be different from c because of the mismatch between PS and PS'. 
 - RX decodes c'. If the PS measurement mismatch is tolerable, RX gets c' = c. Then RX could extract the 128-bit key from c easily. 
 
 - (Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX)
@@ -20,7 +20,7 @@ We could measure the PS, then generate a uniformly distirbuted random hundred-bi
 ![Image text](https://github.com/MrZMN/Implementation-of-PS-based-key-distribution-methods/blob/master/images/fuzzycommitment.png)
 
 ### Details
-- We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc. The choice of ECC code should follow these conditions: The error tolerance ability should be related with the PS inequality; the device ability, such as memory, energy consumption should be concerned; the type of PS mismatches, such as consecutive or random, should be concerned.
+- We can choose different ECC codes, including: 1. different types, like RS or BCH codes. 2. different param settings, including code length, error tolerance, etc. - The choice of ECC code should follow these conditions: 1. the error tolerance ability should be related with the PS mismatch. 2. the device ability, such as memory, energy consumption should be concerned. 3. the type of PS mismatches, such as consecutive or random, should be concerned.
 - In the above implementation, errors on wireless channel wasn't concerned. 
 
 ### Security level
