@@ -1,4 +1,4 @@
-# Fuzzy Extractors - BCH-based Pinsketch construction (based on Set distance metric)
+# Fuzzy Extractors - BCH-based Pinsketch construction (based on set distance metric)
 
 Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRICS AND OTHER NOISY DATA' by DODIS, etc. (2008 edited version)
 
@@ -25,7 +25,7 @@ We could measure the PS values and generate a set based on them. Each set elemen
 
 ### Details
 
-- - The error tolerance t means the max tolerable symmetric difference size between PS and PS'. For instance, the symmetric difference size between {1,2,3} and {2,3,4} is 2.
+- The error tolerance t means the max tolerable symmetric difference size between PS and PS'. For instance, the symmetric difference size between {1,2,3} and {2,3,4} is 2.
 - This construction is based on binary BCH code only. The choice of BCH algorithm is based on: The computation of BCH code should follow the PS element characteristic, i.e. codeword size n of BCH code should be 2^8-1 when each PS element consists of 8 bits. 
 - In the above implementation, error on wireless channel wasn't concerned.
 
