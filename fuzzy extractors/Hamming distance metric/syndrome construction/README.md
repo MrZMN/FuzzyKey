@@ -27,6 +27,4 @@ Based on the paper 'FUZZY EXTRACTORS: HOW TO GENERATE STRONG KEYS FROM BIOMETRIC
 
 ### Security Level
 
-The transmitted syndrome SS is calculated based on the extracted PS string (regarded as a codeword). For instance, based on (n,k) BCH code and n-bit PS string, we regard the PS string as a n-1 degree polynomial r(x) (each bit corresponds to one coefficient of the polynomial), then each element of the syndrome is calculated as: SS[i] = r(a^i), i from 1 to 2t, where a^i belongs to GF(2^m) and n = 2^m-1.  
-
-Therefore, the security of this method is based on the length of the randomly distributed PS string. For a (n,k) BCH code, the security level should be at most 2^n; for a (n,k) RS code, the security level should be at most 2^(m\*n), where n = 2^m-1. 
+Suppose we use (n,k) ECC, each symbol consists of f bits, and we need b blocks in total. The entropy loss is (n-k)\*f\*b.
