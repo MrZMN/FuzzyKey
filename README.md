@@ -22,31 +22,32 @@ Since our work is mainly benchmark, we need to restrict several assumptions for 
 
 #### Our device
 
-We use TI MSP430FR5994 launchpad as the simulator device for our experiments. It obtains 16-bit CPU, 16KB RAM and 128KB flash. Besides, it's specified designed for low power computation. We think this device is suitable to simulate the hardware used in body-area (or specifically, medical devices).
+We use TI MSP430FR5994 launchpad as the simulator device for our experiments. It obtains 16-bit CPU, 8KB SRAM and 128KB FRAM. Besides, it's specified designed for low power computation. We think this device is suitable to simulate the hardware used in body-area (or specifically, medical devices).
 
 #### For algorithms
 1. The target of each method is the same: distribute a secure 128-bit key on both devices.
-2. All methods chosen must be secure in IMD&programmer scenrio and well accepted by security communities. And the methods implemented should provide similar level of security. For instance, different methods/extractors will all cause entropy loss - but different amounts. Based on the same entropy got at the end, the initial entropy contained in PS data might be different.  
-3. Continue to the previous, because we don't focus on the detailed PS choosing or Analog-digital-converting processes, we assume all the PS data as the algorithm inputs has been uniformly distributed random, for convenience of implementation. However, we want to mention that extracted PS data itself doesn't have to be uniformly distributed random originally in these methods (apart from fuzzy commitment).
-4. All these methods could work whenever the PS measurements on both devices are 'similar enough'. However, different PSs may result in different error rates (different measurements mismatch rates). In order to show the performances of these methods on different PSs, we will apply different error rates on the PS measurements, so that the results could tell us which method works better on which PS. For example, fuzzy commitment works great when error rate is less than 5%, but works bad when error rate increases. (Apart from measurement mismatch, transmission error could be concerned as well.) We want to set five thresholds: 2%, 4%, 6%, 8%, 10%. 
+2. All methods chosen must be secure in IMD&programmer scenrio and well accepted by security communities.
+3. All the methods implemented should provide similar level of security. Different requirements on initial PS entropy might be applied on different methods. 
+3. Because we don't focus on the detailed PS choosing or Analog-digital-converting processes, we assume all the PS data has been uniformly distributed random as the algorithm inputs, for convenience of implementation. However, we want to mention that extracted PS data itself doesn't have to be uniformly distributed random originally in these methods (apart from fuzzy commitment).
+4. All these methods could work whenever the PS measurements on both devices are 'similar enough'. However, different PS may has different mismatch rate naturally. Therefore, we apply different mismatch rates on the PS measurements inputs, so that the results show the performances of these methods on different kinds of PS. For example, fuzzy commitment might work well when mismatch rate is less than 5%, but perform bad when mismatch rate increases. Three thresholds are set: 2%, 5%, 10%. 
 
 ### Methods Chosen
 
-Till now, these methods have been well accepted by the security community:
+These methods have been well accepted by the security community:
 1. Based on PS in binary format
 - fuzzy commitment
 - fuzzy extractor: code-offset construction 
 - fuzzy extractor: syndrome construction
 2. Based on PS in set format (for example, use IPI time as set element directly)
 - fuzzy vault
-- fuzzy extractor: improved fuzzy vault
+- fuzzy extractor: improved J-S fuzzy vault
 - fuzzy extractor: PinSketch
 
 Most of these methods are based on ECC (Error-correction Codes). The ECC used:
 1. binary BCH code
 2. Reed-Solomon code
 
-Note: Because many methods rely on ECC codes, it'll also be a research area to test which ECC settings perform better. For example, different ECC types may have different effects, such as: RS works well in burst error naturally. Besides, for block codes, larger block size may result in more memory consumption, but may require less energy consumption. The choice of different block sizes may affect. 
+Note: Because many methods rely on ECC codes, it'll also be a research area to test which ECC settings perform better. For example, different ECC types may have different effects, such as: RS works well in burst error naturally. Besides, larger block size may result in more memory consumption, but may require less energy consumption. The choice of different block sizes may affect. 
 
 
 
