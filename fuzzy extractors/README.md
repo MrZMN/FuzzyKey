@@ -16,3 +16,9 @@ The main protocol could be described briefly:
 - Provement of agreement: send a hash from TX->RX, or send a MAC from RX->TX
 
 The 'operations' mentioned above depend on the exact constructions.
+
+### Security Level
+
+Different from fuzzy commitment and fuzzy vault, fuzzy extractors don't use physiological signals to conceal the secret key. Instead, the key comes from the PS itself. The main idea is to recover the mismatch on the PS measurements at TX/RX, then exact uniformly distributed random key from the agreed PS.
+
+Therefore, the security is ensured if the original entropy of PS measured by both sides is high enough. Precisely, the remaining entropy of agreed PS should be at least 128-bit, considering the entropy loss due to transmission/storage of public information.
