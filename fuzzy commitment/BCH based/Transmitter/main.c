@@ -53,12 +53,12 @@ void encode_bch(uint8_t codeword[], uint8_t data[]){
     }
 }
 
-//TX of fuzzy commitment
+//TX of fuzzy commitment based on BCH code
 int main(){
 
 	uint8_t i;
 
-    //Randomly generate 128-bit key. Assume it's composed of all 1s. The rest are paddings of 0s.
+    //Randomly generate a 128-bit key. Assume it's composed of all 1s. The rest are paddings of 0s.
     uint8_t key[k] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //Extracted PS bit string (uniformly distributed random). Assume it's composed of all 1s.
     uint8_t ps[length] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -72,18 +72,19 @@ int main(){
     	fuzzycommitment[i] ^= ps[i];
     }
 
+    /*
 	//Print the key
 	printf("Key:\n");
-	for (i = 0; i < 128; i++) {
+	for(i = 0; i < 128; i++){
 		printf("%d, ", key[i]);
 	}
 	printf("\n");
 
 	//Print the fuzzy commitment
 	printf("Fuzzy commitment (sent to Receiver):\n");
-	for (i = 0; i < length; i++) {
+	for(i = 0; i < length; i++){
 		printf("%d, ", fuzzycommitment[i]);
 	}
 	printf("\n");
-
+	*/
 }

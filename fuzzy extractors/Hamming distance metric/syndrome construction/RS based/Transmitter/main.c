@@ -34,6 +34,8 @@ void getsyndrome(uint8_t syndrome[], uint8_t codeword[]){
         while(j != n){
             if(temp[j] != -1){
                 syndrome[i] ^= alpha_to[(temp[j]+i*j)%n];
+            }else{
+                syndrome[i] ^= alpha_to[n];     //againt timing attack
             }
             j++;
         }
@@ -41,7 +43,7 @@ void getsyndrome(uint8_t syndrome[], uint8_t codeword[]){
     }
 }
 
-//TX of syndrome-based construction of fuzzy extractor
+//TX of syndrome-based construction of fuzzy extractor based on RS code
 int main(){
 
     uint8_t i;
@@ -54,10 +56,11 @@ int main(){
     //calculate the secure sketch of TX
     getsyndrome(syndrome, ps);
 
-
+    /*
     //Print the secure sketch
     for(i = 1; i < 2*t+1; i++){
         printf("%d, ", syndrome[i]);
     }
     printf("\n");
+    */
 }

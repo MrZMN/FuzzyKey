@@ -21,16 +21,18 @@ void decode_bch(uint8_t codeword[]){
     uint8_t loc[t];
 
 	//Step 1: form the syndromes (S1, S2...S2*t), fit (Si)^2 = S2i
-	for (i = 1; i <= 2*t; i++) {		
+	for(i = 1; i <= 2*t; i++){		
 		s[i] = 0;
 
-		for (j = 0; j < length; j++){
-			if (codeword[j] != 0){					
+		for(j = 0; j < length; j++){
+			if(codeword[j] != 0){					
 				s[i] ^= alpha_to[(i * j) % n];	
+			}else{
+				s[i] ^= alpha_to[n];	
 			}
 		}
 
-		if (s[i] != 0){
+		if(s[i] != 0){
 			syn_error = 1; 
 		}
 
@@ -38,14 +40,14 @@ void decode_bch(uint8_t codeword[]){
 	}
 
 	//Step 2: if error occurs, calculate the error location polynomial
-	if (syn_error) {	
+	if(syn_error){	
 
 		du[0] = 0;			
 		du[1] = s[1];		
 		elp[0][0] = 0;		
 		elp[1][0] = 1;		
 
-		for(i = 1; i < 2*t; i++) {
+		for(i = 1; i < 2*t; i++){
 			elp[0][i] = -1;	
 			elp[1][i] = 0;	
 		}
@@ -57,22 +59,20 @@ void decode_bch(uint8_t codeword[]){
 		
 		u = 0;
 	
-		do {
+		do{
 			u++;
-			if(du[u] == -1) {	
+			if(du[u] == -1){	
 				l[u + 1] = l[u];
-				for (i = 0; i <= l[u]; i++) {
+				for(i = 0; i <= l[u]; i++){
 					elp[u + 1][i] = elp[u][i];
 					elp[u][i] = index_of[elp[u][i]];
 				}
-			}else
-				
-			{
+			}else{
 				q = u - 1;
 				while ((du[q] == -1) && (q > 0))
 					q--;
 
-				if(q > 0) {
+				if(q > 0){
 				  	j = q;
 				  	do{
 				    	j--;
@@ -92,36 +92,36 @@ void decode_bch(uint8_t codeword[]){
 					elp[u + 1][i] = 0;		
 				}
 				for(i = 0; i <= l[q]; i++){
-					if (elp[q][i] != -1){
+					if(elp[q][i] != -1){
 						elp[u + 1][i + u - q] = alpha_to[(du[u] + n - du[q] + elp[q][i]) % n];
 					}
 				}
-				for (i = 0; i <= l[u]; i++) {
+				for(i = 0; i <= l[u]; i++){
 					elp[u + 1][i] ^= elp[u][i];		
 					elp[u][i] = index_of[elp[u][i]];
 				}
 			}
 			u_l[u + 1] = u - l[u + 1];	
  
-			if (u < 2*t) {	
+			if(u < 2*t){	
 				if (s[u + 1] != -1){
 			    	du[u + 1] = alpha_to[s[u + 1]];
 				}else{
 					du[u + 1] = 0;
 				}
-			    for (i = 1; i <= l[u + 1]; i++){
-			      	if ((s[u + 1 - i] != -1) && (elp[u + 1][i] != 0)){
+			    for(i = 1; i <= l[u + 1]; i++){
+			      	if((s[u + 1 - i] != -1) && (elp[u + 1][i] != 0)){
 			        	du[u + 1] ^= alpha_to[(s[u + 1 - i] + index_of[elp[u + 1][i]]) % n];
 			      	}
 			    }
 			  	du[u + 1] = index_of[du[u + 1]];	
 			}
-		}while ((u < 2*t) && (l[u + 1] <= t));
+		}while((u < 2*t) && (l[u + 1] <= t));
  	
 		u++;
 
 		if(l[u] <= t){
-			for (i = 0; i <= l[u]; i++){
+			for(i = 0; i <= l[u]; i++){
 				elp[u][i] = index_of[elp[u][i]];	
 			}
 
@@ -133,7 +133,7 @@ void decode_bch(uint8_t codeword[]){
 			for(i = 1; i <= n; i++){
 				q = 1;
 				for(j = 1; j <= l[u]; j++){
-					if (reg[j] != -1) {
+					if(reg[j] != -1){
 						reg[j] = (reg[j] + j) % n;
 						q ^= alpha_to[reg[j]];
 					}
@@ -146,7 +146,7 @@ void decode_bch(uint8_t codeword[]){
 			
 			//Step 4: correct the malformed codeword
 			if(count == l[u]){
-				for (i = 0; i < l[u]; i++){
+				for(i = 0; i < l[u]; i++){
 					codeword[loc[i]] ^= 1;	
 				}
 			}
@@ -168,8 +168,8 @@ int main(){
     ps[0] ^= 1;
     ps[50] ^= 1;
     ps[100] ^= 1;
-    // ps[150] ^= 1;
-    ps[199] ^= 1;
+    ps[150] ^= 1;
+    // ps[199] ^= 1;
 
     for(i = 0; i < length; i++){
     	ps[i] ^= securesketch[i];
@@ -182,12 +182,14 @@ int main(){
     	ps[i] ^= securesketch[i];
     }
 
+    /*
     //Retrieve the corrected PS string
 	printf("Corrected PS string:\n");
     for(i = 0; i < length; i++){
     	printf("%d, ", ps[i]);
     }
     printf("\n");
+    */
 
 //////////////////////////////////////////////////////////////////
 

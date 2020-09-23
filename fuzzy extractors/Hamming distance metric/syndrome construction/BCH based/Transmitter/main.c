@@ -21,15 +21,17 @@ void getsyndrome(uint8_t codeword[], int16_t s[]){
 		s[i] = 0;
 
 		for(j = 0; j < length; j++){
-			if (codeword[j] != 0){					
+			if(codeword[j] != 0){					
 				s[i] ^= alpha_to[(i * j) % n];	
+			}else{
+				s[i] ^= alpha_to[n];	//against timing attack
 			}
 		}
 	}
 }
 
 
-//TX of syndrome-based construction of fuzzy extractor
+//TX of syndrome-based construction of fuzzy extractor based on BCH code
 int main(){
 
 	uint8_t i;
@@ -41,12 +43,14 @@ int main(){
 
     getsyndrome(ps, securesketch);
 
+    /*
     //Print the secure sketch
     printf("Secure Sketch (Sent to Receiver)\n");
     for(i = 1; i < 2*t+1; i++){
     	printf("%d, ", securesketch[i]);
     }
     printf("\n");
+    */
 
 //////////////////////////////////////////////////////////////////
 

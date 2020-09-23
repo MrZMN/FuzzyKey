@@ -30,16 +30,14 @@ uint8_t isinset(uint8_t value, uint8_t set[], uint8_t setsize){
 //evaluate poly(x) given x
 uint8_t projectpoints(uint8_t size, uint8_t numcoeff, uint8_t x, uint8_t poly[]){
     uint8_t i;
-    uint8_t y = n;
+    uint8_t y = 0;
 
-    if(x != n){
-        y = (x * size) % n;
-        for(i = 0; i < numcoeff; i++){
-            if(y == n){
-                y = (poly[i] + (x * (size-i-1))) % n;
-            }else{
-                y = index_of[alpha_to[y] ^ alpha_to[(poly[i] + (x * (size-i-1))) % n]];
-            }
+    y = (x * size) % n;
+    for(i = 0; i < numcoeff; i++){
+        if(y == n){
+            y = (poly[i] + (x * (size-i-1))) % n;
+        }else{
+            y = index_of[alpha_to[y] ^ alpha_to[(poly[i] + (x * (size-i-1))) % n]];
         }
     }
     return y;
@@ -47,215 +45,215 @@ uint8_t projectpoints(uint8_t size, uint8_t numcoeff, uint8_t x, uint8_t poly[])
 
 //swap the row of a matrix
 void exchange_row(uint8_t *matrix[], uint8_t flag, uint8_t row){
-  uint8_t i;
-  uint8_t *temp;
+    uint8_t i;
+    uint8_t *temp;
 
-  for(i = flag+1; i < row; i++){ 
-    if(*(matrix[i]+flag) != n){
-      temp = matrix[flag];
-      matrix[flag] = matrix[i];
-      matrix[i] = temp;
+    for(i = flag+1; i < row; i++){ 
+        if(*(matrix[i]+flag) != n){
+            temp = matrix[flag];
+            matrix[flag] = matrix[i];
+            matrix[i] = temp;
+        }
     }
-  }
 }
 
 //solve the solutions of an equation set 
 void solve_equationset(uint8_t solutions[], uint8_t *matrix[], uint8_t row, uint8_t col){
-  //input is a (row*col) size matrix 'matrix[]'
+    //input is a (row*col) size matrix 'matrix[]'
 
-  int8_t i, j, k;
-  uint8_t div;
+    int8_t i, j, k;
+    uint8_t div;
 
-  //elementary row transformation
-  for(i = 0; i < row-1; i++){  
+    //elementary row transformation
+    for(i = 0; i < row-1; i++){  
 
-    if(*(matrix[i] + i) == n){   
-      exchange_row(matrix, i, row);    
-    } 
-    if(*(matrix[i]+i) == n){   
-      continue;
-    }
-
-    for(j = i+1; j < row; j++){   
-
-        if(*(matrix[j]+i) == n){
-          div = n;
-        }else{
-          div = (*(matrix[j]+i) + (n - *(matrix[i]+i))) % n;  
+        if(*(matrix[i]+i) == n){   
+            exchange_row(matrix, i, row);    
+        } 
+        if(*(matrix[i]+i) == n){   
+            continue;
         }
 
-      if(div != n){
-        for(k = i; k < col; k++){   
-          if(*(matrix[i]+k) != n){
-            if(*(matrix[j]+k) == n){
-              *(matrix[j]+k) = (div + *(matrix[i]+k)) % n;
+        for(j = i+1; j < row; j++){   
+
+            if(*(matrix[j]+i) == n){
+                div = n;
             }else{
-              *(matrix[j]+k) = index_of[alpha_to[*(matrix[j]+k)] ^ alpha_to[(div + *(matrix[i]+k)) % n]];  
+                div = (*(matrix[j]+i) + (n - *(matrix[i]+i))) % n;  
             }
-          }
+
+            if(div != n){
+                for(k = i; k < col; k++){   
+                    if(*(matrix[i]+k) != n){
+                        if(*(matrix[j]+k) == n){
+                            *(matrix[j]+k) = (div + *(matrix[i]+k)) % n;
+                        }else{
+                            *(matrix[j]+k) = index_of[alpha_to[*(matrix[j]+k)] ^ alpha_to[(div + *(matrix[i]+k)) % n]];  
+                        }
+                    }
+                }
+            }
         }
-      }
     }
-  }
-  //the resulted matrix should be a upper triangular matrix 
+    //the resulted matrix should be a upper triangular matrix 
 
-  //solve the solutions of the equation set based on the upper triangular matrix 
-  for(i = row-1; i >= 0; i--){
+    //solve the solutions of the equation set based on the upper triangular matrix 
+    for(i = row-1; i >= 0; i--){
 
-    for(j = col-2; j > i; j--){
+        for(j = col-2; j > i; j--){
 
-      if(*(matrix[i]+j) != n && solutions[j] != n){     
+            if(*(matrix[i]+j) != n && solutions[j] != n){     
+                if(*(matrix[i]+col-1) == n){
+                    *(matrix[i]+col-1) = index_of[alpha_to[(*(matrix[i]+j) + solutions[j]) % n]];
+                }else{
+                    *(matrix[i]+col-1) = index_of[alpha_to[*(matrix[i]+col-1)] ^ alpha_to[(*(matrix[i]+j) + solutions[j]) % n]]; 
+                }
+            }
+        }
+
         if(*(matrix[i]+col-1) == n){
-          *(matrix[i]+col-1) = index_of[alpha_to[(*(matrix[i]+j) + solutions[j]) % n]];
+            solutions[i] = n;
         }else{
-            *(matrix[i]+col-1) = index_of[alpha_to[*(matrix[i]+col-1)] ^ alpha_to[(*(matrix[i]+j) + solutions[j]) % n]]; 
+            solutions[i] = (*(matrix[i]+col-1) + (n - *(matrix[i]+i))) % n; 
         }
-      }
     }
 
-    if(*(matrix[i]+col-1) == n){
-      solutions[i] = n;
-    }else{
-      solutions[i] = (*(matrix[i]+col-1) + (n - *(matrix[i]+i))) % n; 
-    }
-  }
-
-  //array solutions[] stores the solutions of the equation set
+    //array solutions[] stores the solutions of the equation set
 }
 
 //Division between polynomials. lenA, lenB are the lengthes of polyA[] and polyB[] respectively. store the quotient polynomial in poly[]
 void poly_division(uint8_t A[], uint8_t B[], uint8_t lenA, uint8_t lenB, uint8_t plow[]){
-  uint8_t hA = 0;              
-  uint8_t hB = lenA - lenB;   
-  uint8_t i, div, tem = 0, tem1 = 0;
+    uint8_t hA = 0;              
+    uint8_t hB = lenA - lenB;   
+    uint8_t i, div, tem = 0, tem1 = 0;
 
-  while(hA <= hB){
+    while(hA <= hB){
     
-    div = (A[hA] + (n - B[hB])) % n;  
+        div = (A[hA] + (n - B[hB])) % n;  
 
-    plow[hA] = div;
-    tem = hA;
+        plow[hA] = div;
+        tem = hA;
 
-    for(i = 0; i < lenB; i++){
+        for(i = 0; i < lenB; i++){
 
-      if(B[hB+i] != n){
-        if(A[hA+i] == n){
-          A[hA+i] = alpha_to[(B[hB+i] + div)%n];
-        }else{
-          A[hA+i] = alpha_to[A[hA+i]] ^ alpha_to[(B[hB+i] + div)%n];
+            if(B[hB+i] != n){
+                if(A[hA+i] == n){
+                    A[hA+i] = alpha_to[(B[hB+i] + div)%n];
+                }else{
+                    A[hA+i] = alpha_to[A[hA+i]] ^ alpha_to[(B[hB+i] + div)%n];
+                }
+                A[hA+i] = index_of[A[hA+i]];
+            }
+
+            if(A[hA+i] == n){
+                tem++;
+            }
+            if(A[hA+i] != n || tem == lenA-1 || tem == tem1+lenB){
+                tem1 = tem;
+            }
         }
-        A[hA+i] = index_of[A[hA+i]];
-      }
 
-      if(A[hA+i] == n){
-        tem++;
-      }
-      if(A[hA+i] != n || tem == lenA-1 || tem == tem1+lenB){
-        tem1 = tem;
-      }
+        hA = tem1;
+
     }
 
-    hA = tem1;
-
-  }
-
-  for(i = 0; i < lenA; i++){  //check if the polynomial B[] is divisible. If not, it means the number of errors is beyond the error tolerance
-    if(A[i] != n){
-      tolerantflag = 0;
+    for(i = 0; i < lenA; i++){  //check if the polynomial B[] is divisible. If not, it means the number of errors is beyond the error tolerance
+        if(A[i] != n){
+            tolerantflag = 0;
+        }
     }
-  }
 
-  //the array plow[] stores the quotient polynoial
+    //the array plow[] stores the quotient polynoial
 }
 
 //Berlekamp-Welch algorithm to correct the mismatches on set elements
 void BerlekampWelch(uint8_t ps[], uint8_t ss[]){
-  uint8_t i, j;
-  uint8_t points[s][2];             //the points generated by projecting elements in ps[] on ss(x)
-  uint8_t augmentMat[s][s+1];       //the augmented matrix used in B-W algorithm
-  uint8_t *aMat[s];                 //a pointer array - used to accelarate computation
-  uint8_t solution[s];              //the solutions of augmentMat[][]
-  uint8_t A[s - t/2], B[s - t/2];   //Divide solutions[] into two parts as A() and B()
-  uint8_t plow[s - t];              //plow() = A()/B(), plow() is the poly in the original fuzzy extractor paper 
-  uint8_t faultval;
+    uint8_t i, j;
+    uint8_t points[s][2];             //the points generated by projecting elements in ps[] on ss(x)
+    uint8_t augmentMat[s][s+1];       //the augmented matrix used in B-W algorithm
+    uint8_t *aMat[s];                 //a pointer array - used to accelarate computation
+    uint8_t solution[s];              //the solutions of augmentMat[][]
+    uint8_t A[s - t/2], B[s - t/2];   //Divide solutions[] into two parts as A() and B()
+    uint8_t plow[s - t];              //plow() = A()/B(), plow() is the poly in the original fuzzy extractor paper 
+    uint8_t faultval;
 
-  //evaluate the points by projecting elements in ps[] on ss(x) (ss() is phigh() in the original fuzzy extractor paper)
-  for(i = 0; i < s; i++){
-    points[i][0] = ps[i];
-    points[i][1] = projectpoints(s, t, ps[i], ss);
-  }
-
-  ////Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 's' num of points, succeed if at least (s-t/2) points are legit
-  //generate the augmented matrix
-  for(i = 0; i < s; i++){ 
-    for(j = 0; j < s-t/2; j++){
-      augmentMat[i][j] = (points[i][0] * (s-t/2-1-j)) % n;
-    }
-    if(points[i][1] == n){
-      augmentMat[i][19] = n;
-      augmentMat[i][20] = n;
-    }else{
-      augmentMat[i][19] = points[i][1];                        
-      augmentMat[i][20] = (points[i][0] + points[i][1]) % n;
-    }
-  }
-  //convert the 2D augmented array into 1D pointer array format, to accelerate computation
-  for(i=0;i<s;i++){
-      aMat[i] = augmentMat[i];
-  }
-
-  //Use Gussian Elimination to solve the solutions of the augmented matrix
-  solve_equationset(solution, aMat, s, s+1);
-
-  //The solutions of the equations consist of 2 polys as A[] and B[]
-  for(i = 0; i < s - t/2; i++){
-    A[i] = solution[i];
-    if(i == s - t -1){
-      B[i] = 0;
-    }else{
-      B[i] = solution[i + t/2];
-      faultval = solution[i + t/2];
-    }
-  }
-
-  //The poly plow(x) (in fuzzy extractor paper) is the division of A()/B()
-  for(i = 0; i < s - t; i++){
-    plow[i] = n;
-  }
-  poly_division(A, B, s - t/2, t/2 + 1, plow);
-
-  //if the mismatch is within the error tolerance
-  if(tolerantflag){
-    //Find the roots of p(x) = phigh(x) + plow(x), which are exactly the PS values at the TX side
-    uint8_t px[s];
-    uint8_t roots[s]; 
- 
-    for(i = 0; i < t; i++){
-      px[i] = ss[i]; 
-    }
-    for(i = t; i < s; i++){
-      px[i] = plow[i - t];
-    }
-
-    uint8_t idx = 0, result = 0;
-    for(i = 0; i < n; i++){   //test all posibilities on GF(2^m)
-      if(isinset(i, ps, s) && i != faultval){
-        roots[idx] = i;
-        idx++;
-      }else{
-        result = projectpoints(s+1, s, i, px);
-        if(result == n){
-          roots[idx] = i;
-          idx++;
-        }
-      }
-      
-    }
-
+    //generate the points by evaluating ss(x) where x is in ps[]
     for(i = 0; i < s; i++){
-      ps[i] = roots[i];
+        points[i][0] = ps[i];
+        points[i][1] = projectpoints(s, t, ps[i], ss);
     }
-  }
+
+    ////Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 's' num of points, succeed if at least (s-t/2) points are legit
+    //generate the augmented matrix
+    for(i = 0; i < s; i++){ 
+        for(j = 0; j < s-t/2; j++){
+            augmentMat[i][j] = (points[i][0] * (s-t/2-1-j)) % n;
+        }
+        if(points[i][1] == n){
+            augmentMat[i][19] = n;
+            augmentMat[i][20] = n;
+        }else{
+            augmentMat[i][19] = points[i][1];                        
+            augmentMat[i][20] = (points[i][0] + points[i][1]) % n;
+        }
+    }
+    //convert the 2D augmented array into 1D pointer array format, to accelerate computation
+    for(i=0;i<s;i++){
+        aMat[i] = augmentMat[i];
+    }
+
+    //Use Gussian Elimination to solve the solutions of the augmented matrix
+    solve_equationset(solution, aMat, s, s+1);
+
+    //The solutions of the equations consist of 2 polys as A[] and B[]
+    for(i = 0; i < s - t/2; i++){
+        A[i] = solution[i];
+        if(i == s - t -1){
+            B[i] = 0;
+        }else{
+            B[i] = solution[i + t/2];
+            faultval = solution[i + t/2];
+        }
+    }
+
+    //The poly plow(x) (in fuzzy extractor paper) is the division of A()/B()
+    for(i = 0; i < s - t; i++){
+        plow[i] = n;
+    }
+    poly_division(A, B, s - t/2, t/2 + 1, plow);
+
+    //if the mismatch is within the error tolerance
+    if(tolerantflag){
+        //Find the roots of p(x) = phigh(x) + plow(x), which are exactly the PS values at the TX side
+        uint8_t px[s];
+        uint8_t roots[s]; 
+ 
+        for(i = 0; i < t; i++){
+            px[i] = ss[i]; 
+        }
+        for(i = t; i < s; i++){
+            px[i] = plow[i - t];
+        }
+
+        uint8_t idx = 0, result = 0;
+        for(i = 0; i < n; i++){   //test all posibilities on GF(2^m)
+            if(isinset(i, ps, s) && i != faultval){
+                roots[idx] = i;
+                idx++;
+            }else{
+                result = projectpoints(s+1, s, i, px);
+                if(result == n){
+                    roots[idx] = i;
+                    idx++;
+                }
+            }
+      
+        }
+
+        for(i = 0; i < s; i++){
+            ps[i] = roots[i];
+        }
+    }
 }
 
 
@@ -265,23 +263,25 @@ int main(){
     uint8_t i;
     
     //TX's set generated from PS measurements. Each element should be different from each other. We use 1~s to simulate it.
-    uint8_t ps[s] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    uint8_t ps[s] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
     //secure sketch received from TX
-    uint8_t ss[t] = {3, 235};
+    uint8_t ss[t] = {2, 233};
 
     //add some errors at the PS elements (for test only)
-    ps[1] = 100;
+    // ps[0] = 100;
     // ps[2] = 150;
-    // ps[3] = 200;
+    ps[3] = 254;
 
     //Correct the mismatches on set ps[]
     BerlekampWelch(ps, ss);
   
+    /*
     printf("PS values:\n");
     for(i = 0; i < s; i++){
       printf("%d, ", ps[i]);
     }
     printf("\n");
+    */
 
 //////////////////////////////////////////////////////////////////
 

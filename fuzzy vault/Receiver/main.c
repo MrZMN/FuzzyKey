@@ -29,164 +29,160 @@ uint8_t isinset(uint8_t value, uint8_t set[], uint8_t setsize){
 
 //swap the row of a matrix
 void exchange_row(uint8_t *matrix[], uint8_t flag, uint8_t row){
-  uint8_t i;
-  uint8_t *temp;
+    uint8_t i;
+    uint8_t *temp;
 
-  for(i = flag+1; i < row; i++){ 
-    if(*(matrix[i]+flag) != n){
-      temp = matrix[flag];
-      matrix[flag] = matrix[i];
-      matrix[i] = temp;
-    }
-  }
+    for(i = flag+1; i < row; i++){ 
+        if(*(matrix[i]+flag) != n){
+            temp = matrix[flag];
+            matrix[flag] = matrix[i];
+            matrix[i] = temp;
+        }
+    } 
 }
 
 //solve the solutions of an equation set 
 void solve_equationset(uint8_t solutions[], uint8_t *matrix[], uint8_t row, uint8_t col){
-  //input is a (row*col) size matrix 'matrix[]'
+    //input is a (row*col) size matrix 'matrix[]'
 
-  int8_t i, j, k;
-  uint8_t div;
+    int8_t i, j, k;
+    uint8_t div;
 
-  //elementary row transformation
-  for(i = 0; i < row-1; i++){  
+    //elementary row transformation
+    for(i = 0; i < row-1; i++){  
 
-    if(*(matrix[i] + i) == n){   
-      exchange_row(matrix, i, row);    
-    } 
-    if(*(matrix[i]+i) == n){   
-      continue;
-    }
-
-    for(j = i+1; j < row; j++){   
-
-        if(*(matrix[j]+i) == n){
-          div = n;
-        }else{
-          div = (*(matrix[j]+i) + (n - *(matrix[i]+i))) % n;  
+        if(*(matrix[i] + i) == n){   
+            exchange_row(matrix, i, row);    
+        } 
+        if(*(matrix[i]+i) == n){   
+            continue;
         }
 
-      if(div != n){
-        for(k = i; k < col; k++){   
-          if(*(matrix[i]+k) != n){
-            if(*(matrix[j]+k) == n){
-              *(matrix[j]+k) = (div + *(matrix[i]+k)) % n;
+        for(j = i+1; j < row; j++){   
+
+            if(*(matrix[j]+i) == n){
+                div = n;
             }else{
-              *(matrix[j]+k) = index_of[alpha_to[*(matrix[j]+k)] ^ alpha_to[(div + *(matrix[i]+k)) % n]];  
+                div = (*(matrix[j]+i) + (n - *(matrix[i]+i))) % n;  
             }
-          }
+
+            if(div != n){
+                for(k = i; k < col; k++){   
+                    if(*(matrix[i]+k) != n){
+                        if(*(matrix[j]+k) == n){
+                            *(matrix[j]+k) = (div + *(matrix[i]+k)) % n;
+                        }else{
+                            *(matrix[j]+k) = index_of[alpha_to[*(matrix[j]+k)] ^ alpha_to[(div + *(matrix[i]+k)) % n]];  
+                        }
+                    }
+                }
+            }
         }
-      }
     }
-  }
-  //the resulted matrix should be a upper triangular matrix 
+    //the resulted matrix should be a upper triangular matrix 
 
-  //solve the solutions of the equation set based on the upper triangular matrix 
-  for(i = row-1; i >= 0; i--){
+    //solve the solutions of the equation set based on the upper triangular matrix 
+    for(i = row-1; i >= 0; i--){
+        for(j = col-2; j > i; j--){
+            if(*(matrix[i]+j) != n && solutions[j] != n){     
+                if(*(matrix[i]+col-1) == n){
+                    *(matrix[i]+col-1) = index_of[alpha_to[(*(matrix[i]+j) + solutions[j]) % n]];
+                }else{
+                    *(matrix[i]+col-1) = index_of[alpha_to[*(matrix[i]+col-1)] ^ alpha_to[(*(matrix[i]+j) + solutions[j]) % n]]; 
+                }
+            }
+        }
 
-    for(j = col-2; j > i; j--){
-
-      if(*(matrix[i]+j) != n && solutions[j] != n){     
         if(*(matrix[i]+col-1) == n){
-          *(matrix[i]+col-1) = index_of[alpha_to[(*(matrix[i]+j) + solutions[j]) % n]];
+            solutions[i] = n;
         }else{
-            *(matrix[i]+col-1) = index_of[alpha_to[*(matrix[i]+col-1)] ^ alpha_to[(*(matrix[i]+j) + solutions[j]) % n]]; 
+            solutions[i] = (*(matrix[i]+col-1) + (n - *(matrix[i]+i))) % n; 
         }
-      }
     }
-
-    if(*(matrix[i]+col-1) == n){
-      solutions[i] = n;
-    }else{
-      solutions[i] = (*(matrix[i]+col-1) + (n - *(matrix[i]+i))) % n; 
-    }
-  }
-
-  //array solutions[] stores the solutions of the equation set
+    //array solutions[] stores the solutions of the equation set
 }
 
 //Division between polynomials. lenA, lenB are the lengthes of polyA[] and polyB[] respectively. store the quotient polynomial in poly[]
 void poly_division(uint8_t A[], uint8_t B[], uint8_t lenA, uint8_t lenB, uint8_t plow[]){
-  uint8_t hA = 0;              
-  uint8_t hB = lenA - lenB;   
-  uint8_t i, div, tem = 0, tem1 = 0;
+    uint8_t hA = 0;              
+    uint8_t hB = lenA - lenB;   
+    uint8_t i, div, tem = 0, tem1 = 0;
 
-  while(hA <= hB){
+    while(hA <= hB){
     
-    div = (A[hA] + (n - B[hB])) % n;  
+        div = (A[hA] + (n - B[hB])) % n;  
 
-    plow[hA] = div;
-    tem = hA;
+        plow[hA] = div;
+        tem = hA;
 
-    for(i = 0; i < lenB; i++){
+        for(i = 0; i < lenB; i++){
+            if(B[hB+i] != n){
+                if(A[hA+i] == n){
+                    A[hA+i] = alpha_to[(B[hB+i] + div)%n];
+                }else{
+                    A[hA+i] = alpha_to[A[hA+i]] ^ alpha_to[(B[hB+i] + div)%n];
+                }
+                A[hA+i] = index_of[A[hA+i]];
+            }
 
-      if(B[hB+i] != n){
-        if(A[hA+i] == n){
-          A[hA+i] = alpha_to[(B[hB+i] + div)%n];
-        }else{
-          A[hA+i] = alpha_to[A[hA+i]] ^ alpha_to[(B[hB+i] + div)%n];
+            if(A[hA+i] == n){
+                tem++;
+            }
+            if(A[hA+i] != n || tem == lenA-1 || tem == tem1+lenB){
+                tem1 = tem;
+            }
         }
-        A[hA+i] = index_of[A[hA+i]];
-      }
 
-      if(A[hA+i] == n){
-        tem++;
-      }
-      if(A[hA+i] != n || tem == lenA-1 || tem == tem1+lenB){
-        tem1 = tem;
-      }
+        hA = tem1;
     }
-
-    hA = tem1;
-  }
-  //the array plow[] stores the quotient polynoial
+    //the array plow[] stores the quotient polynoial
 }
 
 //Berlekamp-Welch algorithm to correct the mismatches on set elements
 void BerlekampWelch(uint8_t ps[], uint8_t points[][2], uint8_t key[]){
-  uint8_t i, j;
-  uint8_t augmentMat[s][s+1];       //the augmented matrix used in B-W algorithm
-  uint8_t *aMat[s];                 //a pointer array - used to accelarate computation
-  uint8_t solution[s];              //the solutions of augmentMat[][]
-  uint8_t A[s - t/2], B[s - t/2];   //Divide solutions[] into two parts as A() and B()
+    uint8_t i, j;
+    uint8_t augmentMat[s][s+1];       //the augmented matrix used in B-W algorithm
+    uint8_t *aMat[s];                 //a pointer array - used to accelarate computation
+    uint8_t solution[s];              //the solutions of augmentMat[][]
+    uint8_t A[s - t/2], B[s - t/2];   //Divide solutions[] into two parts as A() and B()
 
-  ////Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 's' num of points, succeed if at least (s-t/2) points are legit
-  //generate the augmented matrix
-  for(i = 0; i < s; i++){ 
-    for(j = 0; j < s-t/2; j++){
-      augmentMat[i][j] = (points[i][0] * (s-t/2-1-j)) % n;
+    ////Use Reed-Soloman Decoding (Berlekamp-Welch algorithm) to generate a poly from 's' num of points, succeed if at least (s-t/2) points are legit
+    //generate the augmented matrix
+    for(i = 0; i < s; i++){ 
+        for(j = 0; j < s-t/2; j++){
+            augmentMat[i][j] = (points[i][0] * (s-t/2-1-j)) % n;
+        }
+        if(points[i][1] == n){
+            augmentMat[i][9] = n;
+            augmentMat[i][10] = n;
+        }else{
+            augmentMat[i][9] = points[i][1];                        
+            augmentMat[i][10] = (points[i][0] + points[i][1]) % n;
+        }
     }
-    if(points[i][1] == n){
-      augmentMat[i][9] = n;
-      augmentMat[i][10] = n;
-    }else{
-      augmentMat[i][9] = points[i][1];                        
-      augmentMat[i][10] = (points[i][0] + points[i][1]) % n;
+    //convert the 2D augmented array into 1D pointer array format, to accelerate computation
+    for(i=0;i<s;i++){
+        aMat[i] = augmentMat[i];
     }
-  }
-  //convert the 2D augmented array into 1D pointer array format, to accelerate computation
-  for(i=0;i<s;i++){
-      aMat[i] = augmentMat[i];
-  }
 
-  //Use Gussian Elimination to solve the solutions of the augmented matrix
-  solve_equationset(solution, aMat, s, s+1);
+    //Use Gussian Elimination to solve the solutions of the augmented matrix
+    solve_equationset(solution, aMat, s, s+1);
 
-  //The solutions of the equations consist of 2 polys as A[] and B[]
-  for(i = 0; i < s - t/2; i++){
-    A[i] = solution[i];
-    if(i == s - t -1){
-      B[i] = 0;
-    }else{
-      B[i] = solution[i + t/2];
+    //The solutions of the equations consist of 2 polys as A[] and B[]
+    for(i = 0; i < s - t/2; i++){
+        A[i] = solution[i];
+        if(i == s - t -1){
+            B[i] = 0;
+        }else{
+            B[i] = solution[i + t/2];
+        }
     }
-  }
 
-  //The key polynomial is A()/B(), if the number of errors is within the error threshold
-  for(i = 0; i < s - t; i++){
-    key[i] = n;
-  }
-  poly_division(A, B, s - t/2, t/2 + 1, key);
+    //The key polynomial is A()/B(), if the number of errors is within the error threshold
+    for(i = 0; i < s - t; i++){
+        key[i] = n;
+    }
+    poly_division(A, B, s - t/2, t/2 + 1, key);
 }
 
 void matchpoint(uint8_t ps[], uint8_t points[][2], uint8_t matchedpoints[][2]){
@@ -213,19 +209,19 @@ int main(){
 
 	uint8_t i;
 
-	//RX's set generated from PS measurements. Each element should be different from each other. We use 1~s to simulate it.
-	uint8_t ps[s] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+	//RX's set generated from PS measurements. Each element should be different from each other. We use 0~s-1 to simulate it.
+	uint8_t ps[s] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	//points received from TX
-	uint8_t points[s+chaff][2] = {{0, 130}, {1, 88}, {2, 175}, {3, 246}, {4, 94}, {5, 90}, {6, 236}, {7, 31}, {8, 187}, {9, 244}, {10, 179}, {11, 29}, {12, 217}, {13, 181}, {14, 231}, {15, 12}, {16, 68}, {17, 181}, {18, 33}, {19, 164}, {20, 118}, {21, 203}, {22, 202}, {23, 250}, {24, 207}, {25, 173}, {26, 129}, {27, 214}, {28, 111}, {29, 141}, {30, 100}, {31, 94}, {32, 82}, {33, 138}, {34, 73}, {35, 234}, {36, 168}, {37, 197}, {38, 30}, {39, 238}, {40, 242}, {41, 96}, {42, 210}, {43, 87}, {44, 62}, {45, 157}, {46, 197}, {47, 211}, {48, 14}, {49, 47}, {50, 108}, {51, 71}, {52, 176}, {53, 195}, {54, 38}, {55, 123}, {56, 98}, {57, 96}, {58, 242}, {59, 219}, {60, 148}, {61, 236}, {62, 55}, {63, 99}, {64, 202}, {65, 254}, {66, 153}, {67, 51}, {68, 78}, {69, 51}, {70, 132}, {71, 200}, {72, 84}, {73, 121}, {74, 78}, {75, 95}, {76, 153}, {77, 67}, {78, 188}, {79, 114}, {80, 238}, {81, 161}, {82, 27}, {83, 207}, {84, 127}, {85, 75}, {86, 43}, {87, 60}, {88, 175}, {89, 181}, {90, 32}, {91, 212}, {92, 136}, {93, 193}, {94, 124}, {95, 164}, {96, 105}, {97, 226}, {98, 121}, {99, 37}, {100, 240}, {101, 66}, {102, 235}, {103, 217}, {104, 19}, {105, 123}, {106, 48}, {107, 117}, {108, 160}, {109, 125}, {110, 236}, {111, 73}, {112, 237}, {113, 197}, {114, 173}, {115, 58}, {116, 16}, {117, 182}, {118, 130}, {119, 22}, {120, 11}, {121, 145}, {122, 216}, {123, 122}, {124, 217}, {125, 176}, {126, 214}, {127, 37}, {128, 234}, {129, 189}, {130, 165}, {131, 169}, {132, 180}, {133, 234}, {134, 71}, {135, 249}, {136, 207}, {137, 136}, {138, 130}, {139, 117}, {140, 110}, {141, 128}, {142, 183}, {143, 59}, {144, 149}, {145, 147}, {146, 196}, {147, 101}, {148, 171}, {149, 32}, {150, 46}, {151, 65}, {152, 171}, {153, 78}, {154, 48}, {155, 89}, {156, 39}, {157, 70}, {158, 61}, {159, 7}, {160, 79}, {161, 133}, {162, 159}, {163, 142}, {164, 185}, {165, 238}, {166, 93}, {167, 26}, {168, 101}, {169, 12}, {170, 138}, {171, 235}, {172, 99}, {173, 23}, {174, 75}, {175, 5}, {176, 198}, {177, 221}, {178, 57}, {179, 24}, {180, 205}, {181, 121}, {182, 19}, {183, 19}, {184, 7}, {185, 52}, {186, 113}, {187, 153}, {188, 161}, {189, 251}, {190, 249}, {191, 239}, {192, 207}, {193, 223}, {194, 169}, {195, 51}, {196, 138}, {197, 187}, {198, 142}, {199, 22}, {200, 201}, {201, 142}, {202, 219}, {203, 227}, {204, 108}, {205, 67}, {206, 177}, {207, 157}, {208, 192}, {209, 214}, {210, 185}, {211, 11}, {212, 199}, {213, 49}, {214, 183}, {215, 109}, {216, 90}, {217, 147}, {218, 153}, {219, 210}, {220, 135}, {221, 60}, {222, 253}, {223, 141}, {224, 233}, {225, 223}, {226, 211}, {227, 63}, {228, 9}, {229, 79}, {230, 148}, {231, 233}, {232, 71}, {233, 132}, {234, 178}, {235, 147}, {236, 198}, {237, 236}, {238, 119}, {239, 67}, {240, 43}, {241, 79}, {242, 158}, {243, 216}, {244, 199}, {245, 77}, {246, 7}, {247, 188}, {248, 87}, {249, 186}, {250, 177}, {251, 250}, {252, 103}, {253, 9}, {254, 215}};
+	uint8_t points[s+chaff][2] = {{0, 255}, {1, 88}, {2, 175}, {3, 246}, {4, 94}, {5, 90}, {6, 236}, {7, 31}, {8, 187}, {9, 244}, {10, 137}, {11, 142}, {12, 54}, {13, 88}, {14, 163}, {15, 55}, {16, 151}, {17, 123}, {18, 160}, {19, 131}, {20, 193}, {21, 82}, {22, 117}, {23, 99}, {24, 89}, {25, 246}, {26, 84}, {27, 211}, {28, 254}, {29, 183}, {30, 202}, {31, 221}, {32, 69}, {33, 131}, {34, 75}, {35, 140}, {36, 129}, {37, 233}, {38, 81}, {39, 244}, {40, 16}, {41, 10}, {42, 126}, {43, 110}, {44, 159}, {45, 237}, {46, 90}, {47, 159}, {48, 111}, {49, 164}, {50, 139}, {51, 112}, {52, 147}, {53, 164}, {54, 127}, {55, 172}, {56, 122}, {57, 24}, {58, 17}, {59, 51}, {60, 220}, {61, 204}, {62, 51}, {63, 138}, {64, 148}, {65, 211}, {66, 206}, {67, 104}, {68, 152}, {69, 128}, {70, 220}, {71, 60}, {72, 118}, {73, 250}, {74, 245}, {75, 148}, {76, 189}, {77, 124}, {78, 19}, {79, 195}, {80, 23}, {81, 114}, {82, 246}, {83, 185}, {84, 84}, {85, 19}, {86, 211}, {87, 33}, {88, 227}, {89, 128}, {90, 125}, {91, 141}, {92, 89}, {93, 222}, {94, 27}, {95, 86}, {96, 220}, {97, 147}, {98, 31}, {99, 173}, {100, 219}, {101, 32}, {102, 22}, {103, 113}, {104, 157}, {105, 237}, {106, 173}, {107, 150}, {108, 47}, {109, 89}, {110, 238}, {111, 20}, {112, 165}, {113, 9}, {114, 82}, {115, 40}, {116, 157}, {117, 88}, {118, 131}, {119, 190}, {120, 190}, {121, 218}, {122, 56}, {123, 38}, {124, 114}, {125, 222}, {126, 147}, {127, 9}, {128, 63}, {129, 218}, {130, 165}, {131, 22}, {132, 23}, {133, 196}, {134, 229}, {135, 117}, {136, 61}, {137, 6}, {138, 230}, {139, 44}, {140, 196}, {141, 62}, {142, 247}, {143, 232}, {144, 87}, {145, 238}, {146, 114}, {147, 253}, {148, 34}, {149, 179}, {150, 250}, {151, 114}, {152, 126}, {153, 10}, {154, 188}, {155, 214}, {156, 42}, {157, 210}, {158, 43}, {159, 8}, {160, 214}, {161, 36}, {162, 218}, {163, 38}, {164, 82}, {165, 188}, {166, 20}, {167, 115}, {168, 211}, {169, 38}, {170, 119}, {171, 88}, {172, 237}, {173, 109}, {174, 176}, {175, 254}, {176, 16}, {177, 139}, {178, 148}, {179, 64}, {180, 227}, {181, 239}, {182, 210}, {183, 189}, {184, 31}, {185, 188}, {186, 101}, {187, 19}, {188, 147}, {189, 16}, {190, 34}, {191, 69}, {192, 96}, {193, 32}, {194, 10}, {195, 29}, {196, 201}, {197, 137}, {198, 219}, {199, 54}, {200, 245}, {201, 230}, {202, 139}, {203, 226}, {204, 251}, {205, 178}, {206, 147}, {207, 80}, {208, 249}, {209, 56}, {210, 179}, {211, 110}, {212, 141}, {213, 191}, {214, 32}, {215, 76}, {216, 149}, {217, 76}, {218, 19}, {219, 109}, {220, 83}, {221, 8}, {222, 216}, {223, 36}, {224, 106}, {225, 156}, {226, 70}, {227, 155}, {228, 37}, {229, 6}, {230, 247}, {231, 43}, {232, 149}, {233, 10}, {234, 174}, {235, 186}, {236, 161}, {237, 108}, {238, 243}, {239, 34}, {240, 135}, {241, 70}, {242, 150}, {243, 55}, {244, 178}, {245, 122}, {246, 201}, {247, 223}, {248, 140}, {249, 85}, {250, 119}, {251, 52}, {252, 253}, {253, 242}, {254, 87}};
 	//matched points
 	uint8_t matchedpoints[s][2];
 	//the key
 	uint8_t key[keypolydeg+1];
 
 	//add some errors (for test only)
-	// ps[0] = 21;
+	ps[0] = 21;
 	// ps[1] = 22;
-	ps[2] = 23;
+	// ps[2] = 23;
 
   	//match the legit points from all received points
 	matchpoint(ps, points, matchedpoints);

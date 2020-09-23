@@ -66,8 +66,8 @@ int main(){
 
 	//Randomly generate (part of) a key. Assume it's all 1s.
 	uint8_t key[keypolydeg+1] = {1, 1, 1, 1, 1, 1, 1, 1};
-	//TX's set generated from PS measurements. Each element should be different from each other. We use 1~s to simulate it.
-	uint8_t ps[s] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+	//TX's set generated from PS measurements. Each element should be different from each other. We use 0~s-1 to simulate it.
+	uint8_t ps[s] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	//Sent in air
 	uint8_t points[s+chaff][2];
 

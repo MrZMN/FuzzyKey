@@ -72,12 +72,14 @@ int main(){
     	securesketch[i] ^= ps[i];
     }
 
+    /*
 	//Print the secure sketch
 	printf("Secure sketch (sent to Receiver):\n");
 	for (i = 0; i < length; i++) {
 		printf("%d, ", securesketch[i]);
 	}
 	printf("\n");
+	*/
 
 //////////////////////////////////////////////////////////////////
 

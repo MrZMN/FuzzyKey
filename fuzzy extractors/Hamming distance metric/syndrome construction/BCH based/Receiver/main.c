@@ -21,8 +21,10 @@ void getsyndrome(uint8_t codeword[], int16_t s[]){
 		s[i] = 0;
 
 		for(j = 0; j < length; j++){
-			if (codeword[j] != 0){					
+			if(codeword[j] != 0){					
 				s[i] ^= alpha_to[(i * j) % n];	
+			}else{
+				s[i] ^= alpha_to[n];	//against timing attack
 			}
 		}
 	}
@@ -37,7 +39,7 @@ void correcterr(uint8_t codeword[], int16_t s[]){
     uint8_t loc[t];
 
 	//Step 1: convert the syndrome into index form
-	for (i = 1; i <= 2*t; i++) {		
+	for(i = 1; i <= 2*t; i++){		
 		s[i] = index_of[s[i]];
 	}
 
@@ -47,7 +49,7 @@ void correcterr(uint8_t codeword[], int16_t s[]){
 	elp[0][0] = 0;		
 	elp[1][0] = 1;		
 
-	for(i = 1; i < 2*t; i++) {
+	for(i = 1; i < 2*t; i++){
 		elp[0][i] = -1;	
 		elp[1][i] = 0;	
 	}
@@ -59,26 +61,24 @@ void correcterr(uint8_t codeword[], int16_t s[]){
 	
 	u = 0;
 
-	do {
+	do{
 		u++;
-		if(du[u] == -1) {	
+		if(du[u] == -1){	
 			l[u + 1] = l[u];
-			for (i = 0; i <= l[u]; i++) {
+			for(i = 0; i <= l[u]; i++){
 				elp[u + 1][i] = elp[u][i];
 				elp[u][i] = index_of[elp[u][i]];
 			}
-		}else
-			
-		{
+		}else{
 			q = u - 1;
-			while ((du[q] == -1) && (q > 0))
+			while((du[q] == -1) && (q > 0))
 				q--;
 
-			if(q > 0) {
+			if(q > 0){
 			  	j = q;
 			  	do{
 			    	j--;
-			    	if ((du[j] != -1) && (u_l[q] < u_l[j]))
+			    	if((du[j] != -1) && (u_l[q] < u_l[j]))
 			      		q = j;
 			  	}while (j > 0);
 			}
@@ -94,36 +94,38 @@ void correcterr(uint8_t codeword[], int16_t s[]){
 				elp[u + 1][i] = 0;		
 			}
 			for(i = 0; i <= l[q]; i++){
-				if (elp[q][i] != -1){
+				if(elp[q][i] != -1){
 					elp[u + 1][i + u - q] = alpha_to[(du[u] + n - du[q] + elp[q][i]) % n];
 				}
 			}
-			for (i = 0; i <= l[u]; i++) {
+			for(i = 0; i <= l[u]; i++){
 				elp[u + 1][i] ^= elp[u][i];		
 				elp[u][i] = index_of[elp[u][i]];
 			}
 		}
 		u_l[u + 1] = u - l[u + 1];	
 
-		if (u < 2*t) {	
-			if (s[u + 1] != -1){
+		if(u < 2*t){	
+			if(s[u + 1] != -1){
 		    	du[u + 1] = alpha_to[s[u + 1]];
 			}else{
-				du[u + 1] = 0;
+				du[u + 1] = alpha_to[n];
 			}
-		    for (i = 1; i <= l[u + 1]; i++){
-		      	if ((s[u + 1 - i] != -1) && (elp[u + 1][i] != 0)){
+		    for(i = 1; i <= l[u + 1]; i++){
+		      	if((s[u + 1 - i] != -1) && (elp[u + 1][i] != 0)){
 		        	du[u + 1] ^= alpha_to[(s[u + 1 - i] + index_of[elp[u + 1][i]]) % n];
+		      	}else{
+		      		du[u + 1] ^= alpha_to[n] + index_of[1];		//againt timing attack
 		      	}
 		    }
 		  	du[u + 1] = index_of[du[u + 1]];	
 		}
-	}while ((u < 2*t) && (l[u + 1] <= t));
+	}while((u < 2*t) && (l[u + 1] <= t));
 	
 	u++;
 
 	if(l[u] <= t){
-		for (i = 0; i <= l[u]; i++){
+		for(i = 0; i <= l[u]; i++){
 			elp[u][i] = index_of[elp[u][i]];	
 		}
 
@@ -148,15 +150,15 @@ void correcterr(uint8_t codeword[], int16_t s[]){
 		
 		//Step 4: correct the malformed codeword
 		if(count == l[u]){
-			for (i = 0; i < l[u]; i++){
+			for(i = 0; i < l[u]; i++){
 				codeword[loc[i]] ^= 1;	
 			}
 		}
 	}
 }
 
-
-//RX of syndrome-based construction of fuzzy extractor
+ 
+//RX of syndrome-based construction of fuzzy extractor based on BCH code
 int main(){
 
 	uint8_t i, errtag = 0;
@@ -184,17 +186,19 @@ int main(){
     	}
     }
 
+    //If there're mismatches, correct them
     if(errtag){
-    	//correct the errors
     	correcterr(ps, securesketchRX);
     }
 
+    /*
     //Print the corrected PS measurements
     printf("The corrected PS string\n");
     for(i = 0; i < length; i++){
     	printf("%d, ", ps[i]);
     }
     printf("\n");
+    */
 
 //////////////////////////////////////////////////////////////////
 

@@ -62,12 +62,12 @@ void encode_rs(uint8_t codeword[n], uint8_t data[k]){
 } 
  
 
-//TX of fuzzy commitment
+//TX of fuzzy commitment based on RS code
 int main(){
 
 	uint8_t i;
 
-    //Randomly generate 128-bit key. Assume it's composed of all 1s. The rest are paddings of 0s.
+    //Randomly generate a 128-bit key. Assume it's composed of all 1s. The rest are paddings of 0s.
     uint8_t key[k] = {31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 28, 0, 0, 0};
     //Extracted PS bit string (uniformly distributed random). Assume it's composed of all 1s.
     uint8_t ps[n] = {31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31};
@@ -81,16 +81,18 @@ int main(){
     	fuzzycommitment[i] ^= ps[i];
     }
 
+    /*
 	//Print the key
 	printf("Key:\n");
-	for (i = 0; i < k; i++) {
+	for(i = 0; i < k; i++){
 		printf("%d, ", key[i]);
 	}
 	printf("\n");
 	//Print the fuzzy commitment
 	printf("Fuzzy commitment (sent to Receiver):\n");
-	for (i = 0; i < n; i++) {
+	for(i = 0; i < n; i++){
 		printf("%d, ", fuzzycommitment[i]);
 	}
 	printf("\n");
+    */
 }

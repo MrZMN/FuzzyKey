@@ -14,47 +14,21 @@ int16_t alpha_to[n+1] = {1, 2, 4, 8, 16, 32, 64, 128, 113, 226, 181, 27, 54, 108
 //index form
 int16_t index_of[n+1] = {-1, 0, 1, 231, 2, 207, 232, 59, 3, 35, 208, 154, 233, 20, 60, 183, 4, 159, 36, 66, 209, 118, 155, 251, 234, 245, 21, 11, 61, 130, 184, 146, 5, 122, 160, 79, 37, 113, 67, 106, 210, 224, 119, 221, 156, 242, 252, 32, 235, 213, 246, 135, 22, 42, 12, 140, 62, 227, 131, 75, 185, 191, 147, 94, 6, 70, 123, 195, 161, 53, 80, 167, 38, 109, 114, 203, 68, 51, 107, 49, 211, 40, 225, 189, 120, 111, 222, 240, 157, 116, 243, 128, 253, 205, 33, 18, 236, 163, 214, 98, 247, 55, 136, 102, 23, 82, 43, 177, 13, 169, 141, 89, 63, 8, 228, 151, 132, 72, 76, 218, 186, 125, 192, 200, 148, 197, 95, 174, 7, 150, 71, 217, 124, 199, 196, 173, 162, 97, 54, 101, 81, 176, 168, 88, 39, 188, 110, 239, 115, 127, 204, 17, 69, 194, 52, 166, 108, 202, 50, 48, 212, 134, 41, 139, 226, 74, 190, 93, 121, 78, 112, 105, 223, 220, 241, 31, 158, 65, 117, 250, 244, 10, 129, 145, 254, 230, 206, 58, 34, 153, 19, 182, 237, 15, 164, 46, 215, 171, 99, 86, 248, 143, 56, 180, 137, 91, 103, 29, 24, 25, 83, 26, 44, 84, 178, 27, 14, 45, 170, 85, 142, 179, 90, 28, 64, 249, 9, 144, 229, 57, 152, 181, 133, 138, 73, 92, 77, 104, 219, 30, 187, 238, 126, 16, 193, 165, 201, 47, 149, 216, 198, 172, 96, 100, 175, 87};
 
-
-//Heap sort, in ascending form
-void Swap(uint8_t *num_a, uint8_t *num_b){
-    uint8_t temp = *num_b;
-    *num_b = *num_a;
-    *num_a = temp;
-}
-
-void HeapAdjust(uint8_t array[], uint8_t i, uint8_t len){
-
-    uint8_t nChild, nTemp;
-    for(nTemp = array[i]; 2 * i + 1 < len; i = nChild){
-
-        nChild = 2 * i + 1;
-
-        if(nChild != len - 1 && array[nChild + 1] > array[nChild]){
-            ++nChild;
+//Sort the array in ascending order
+void bubble_sort(uint8_t array[], uint8_t len){
+    uint8_t i, j, temp;
+    for(i = 0; i < len-1; i++){
+        for(j = 0; j < len-1-i; j++){
+            if(array[j] > array[j+1]){
+                temp = array[j];
+                array[j] = array[j+1];
+                array[j+1] = temp;
+            }else{  //against timing attack
+                temp = array[j];
+                array[j+1] = array[j+1];
+                array[j] = temp;
+            }
         }
-
-        if(nTemp < array[nChild]){
-            array[i] = array[nChild];
-        }
-        else {
-            break;
-        }
-    }
-
-    array[i] = nTemp;
-}
-
-void HeapSort(uint8_t array[], uint8_t len){
-
-    int8_t i;
-
-    for(i = len/2-1; i >= 0; --i){
-        HeapAdjust(array, i, len);
-    }
-
-    for(i = len-1; i > 0; --i){
-        Swap(&array[0], &array[i]);
-        HeapAdjust(array, 0, i);
     }
 }
 
@@ -189,11 +163,13 @@ void getsetdiff(int16_t ss[], int16_t setdiff[]){
             if (ss[u + 1] != -1){
                 d[u + 1] = alpha_to[ss[u + 1]];
             }else{
-                d[u + 1] = 0;
+                d[u + 1] = alpha_to[n];
             }
             for (i = 1; i <= l[u + 1]; i++){
                 if ((ss[u + 1 - i] != -1) && (elp[u + 1][i] != 0)){
                     d[u + 1] ^= alpha_to[(ss[u + 1 - i] + index_of[elp[u + 1][i]]) % n];
+                }else{
+                    d[u + 1] ^= alpha_to[n] + index_of[1];  //against timing attck
                 }
             }
             d[u + 1] = index_of[d[u + 1]];
@@ -224,6 +200,8 @@ void getsetdiff(int16_t ss[], int16_t setdiff[]){
                 setdiff[count] = n - i; 
                 if(setdiff[count] != -1){
                     setdiff[count] = alpha_to[setdiff[count]];
+                }else{
+                    setdiff[count] = -1;    //against timing attack
                 }
                 count++;
             }
@@ -235,7 +213,9 @@ void getsetdiff(int16_t ss[], int16_t setdiff[]){
 //The RX of BCH-based Pinsketch construction of fuzzy extractor
 int main(){
 
-    uint8_t i, errflag = 0;
+    uint8_t i;
+    //flag to show if there're mismatches
+    uint8_t errflag = 0;
 
     //RX's set generated from PS measurements. Each element should be different from each other. We use 1~s to simulate it.
     uint8_t ps[s] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};    //stores the ps measurements at RX side, may have several mismatches with the ones at TX side. PS values should be different from each other. Each value comes from [0, 255]
@@ -247,9 +227,8 @@ int main(){
     int16_t syndrome[2*t+1];                
 
     //add some errors (for test only)
-    ps[0] ^= 100;
-    // ps[1] ^= 101;
-    // ps[2] ^= 102;
+    // ps[0] ^= 100;
+    ps[1] ^= 101;
     
     //Calculate the secure sketch of RX
     securesketch(ps, ssRX);
@@ -280,13 +259,15 @@ int main(){
     }
 
     //sort the array (sort because RX could only recover all the PS elements, but doesn't ensure the PS values are in the same order)
-    HeapSort(ps, s);
+    bubble_sort(ps, s);
 
+    /*
     printf("PS values:\n");
     for(i = 0; i < s; i++){
       printf("%d, ", ps[i]);
     }
     printf("\n");
+    */
 
 //////////////////////////////////////////////////////////////////
 

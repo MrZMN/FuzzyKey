@@ -61,7 +61,7 @@ void encode_rs(uint8_t codeword[n], uint8_t data[k]){
   	}
 } 
 
-//TX of code-offset construction of fuzzy extractor
+//TX of code-offset construction of fuzzy extractor based on RS code
 int main(){
 
 	uint8_t i;
@@ -80,12 +80,14 @@ int main(){
     	securesketch[i] ^= ps[i];
     }
 
+    /*
 	//Print the secure sketch
 	printf("Secure sketch (sent to Receiver):\n");
 	for (i = 0; i < n; i++) {
 		printf("%d, ", securesketch[i]);
 	}
 	printf("\n");
+    */
 
 //////////////////////////////////////////////////////////////////
 
