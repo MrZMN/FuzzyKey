@@ -14,7 +14,7 @@ Therefore, this project will collect, compare well-known PS-based key distributi
 
 ### Assumptions and Conditions
 
-Since our work is mainly benchmark, we need to restrict several assumptions for our implementations:
+Since our work is mainly benchmark, we need to restrict several assumptions for our implementations :
 
 #### For device
 1. We only focus on key distribution on two devices, namely, all the methods work on a TX and a RX. By our implementation, we will also give a clear conclusion about: TX or RX is more suitable for the resouce-restricted device, depending on the resource consumptions we measure, such as energy consumption. Actually, this is also one of the targets of this research, because we haven't seen papers giving clear info like, the IMD should be TX when fuzzy vault is used because TX consumes less energy than RX.
