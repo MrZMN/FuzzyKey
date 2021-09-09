@@ -1,4 +1,4 @@
-# Implementation-of-PS-based-key-distribution-methods-for-body-area-network
+# FuzzyKey: Fuzzy primitives on resource-constrained devices
 
 Comparison of the well-accepted body-area key distribution methods based on PS (physiological signals). All methods have been implemented in C, which are targeted for embedded systems.
 
