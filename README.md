@@ -1,63 +1,37 @@
 # FuzzyKey: Fuzzy primitives on resource-constrained devices
 
-Comparison of the well-accepted body-area key distribution methods based on PS (physiological signals). All methods have been implemented in C, which are targeted for embedded systems.
+### Background
 
-### Background & Research Purpose
+There are various kinds of entropy sources in the nature, for example, a human's physiological signal (such as heart rate), PUF, biometrics, etc. Intuitively, a cryptographic key can be shared between two devices who can independently measure such an entropy source. However, this is not viable because the measurements are always not identical but at best rather similar due to inherent noise introduced by the measuring process. Fuzzy primitives, including the fuzzy commitment, fuzzy vault and fuzzy extractor, allow two parties to agree a cryptographic key based on a noisy entropy source.
 
-Realising secure key distribution in implanted medical devices (IMD) scenarios, namely, between an IMD inside the body and a programmer outside the body, is significant. The PS-based key distribution method is one of the best choices, which is the field we're focusing on. 
+Although the fuzzy cryptographic primitives have been frequently analysed and widely applied in multiple scenarios, little effort has been devoted into studying the feasibility of fuzzy primitives in resource-constrained systems as well as how to conﬁgure them to optimise performance. We address this gap by implementing six fuzzy cryptographic primitives on a TI MSP430 low power microcontroller. The implementations are in plain C and mainly rely on standard C libraries, thus can be easily ported on other embedded systems. We evaluate and compare the resource consumption of each construction under various parameter settings both at the transmitter and receiver using an MSP430. We demonstrate that fuzzy primitives are feasible on a resource-constrained embedded devices. Additionally, we also implement countermeasures against timing attacks for the most eﬃcient constructions. Our works can be regarded as a reference of real-world designs. More details can be viewed in: 
 
-The main idea is: by measuring the patient's PS information (for example, heart rate, although proven to be insecure) simultaneously for a period of time, both the IMD and programmer could distribute a secure key using the measured PS as a secret. The conditions of these methods include: 1. The PS can only be measured by an IMD or a legit programmer which touches the patient's skin, namely, can't be obtained by a remote attacker. 2. The PS itself is reliable, i.e. contains certain amount of entropy, easy to measure and could be measured similarly by both devices, etc. 
+### PS (physiological signal) as an entropy source
 
-We choose the PS-based key distribution methods for several reasons, for instance, they're user friendly, simple to use and useful in emergency circumstances. Besides, it substantially reduces the risks of RF signal leakage, because even though a remote attacker eavesdrops the RF signal successfully, he can't get any useful information without knowing the PS measurements. Apart from the IMD scenarios, these methods also work on **body-area networks**, i.e. used to authenticate sensors. 
+We specifically focus on the application scenario when PS is used as a shared entropy source. This is because this scenario involves the most enery sensitive devices, e.g., IMDs (implantable medical devices) and wearables. These devices (such as a pacemaker and an external device) are able to share a key by independently and synchronously taking a measurement of a given user’s PS (can only be measured by making physical contact with him). Therefore, the source codes provided also in this context. However, we note that our work also serves as a reference for other use cases such as biometrics or PUFs.
 
-Therefore, this project will collect, compare well-known PS-based key distribution methods and implement them in a simulated board (MSP430 is chosen as an equivalent of IMD) and a simulated human body environment. Our purpose is to provide a framework for the real-world developers who implement these methods for security. Although there're researches that have implemented one or two of these methods, we haven't found papers that implement and compare all of them in the same simulated environment. Besides, few researches focus on the the energy consumption, which is vital in embedded systems. We believe it's useful to give people an idea of - are these methods really practical for IMD which has hardware/energy constrains? Especially, how much energy/computation/time are required? Which might be the best choices for medical device/body-area scenarios? 
+### Implemented fuzzy primitives
 
-### Assumptions and Conditions
+The fuzzy primitives are divided into two categories: ones based on the Hamming metric space and the set metric space.
+1. Based on Hamming metric
+- Fuzzy commitment
+- Fuzzy extractor: code-offset construction 
+- Fuzzy extractor: syndrome construction
+2. Based on set metric
+- Fuzzy vault
+- Fuzzy extractor: improved Juels–Sudan construction
+- Fuzzy extractor: PinSketch construction
 
-Since our work is mainly benchmark, we need to restrict several assumptions for our implementations :
+Most of these methods are based on ECC (Error-correction Code). The used ECCs include:
+1. binary Bose-Chaudhuri-Hocquenghem (BCH) code
+2. Reed-Solomon (RS) code
 
-#### For device
-1. We only focus on key distribution on two devices, namely, all the methods work on a TX and a RX. By our implementation, we will also give a clear conclusion about: TX or RX is more suitable for the resouce-restricted device, depending on the resource consumptions we measure, such as energy consumption. Actually, this is also one of the targets of this research, because we haven't seen papers giving clear info like, the IMD should be TX when fuzzy vault is used because TX consumes less energy than RX.
-2. We will not measure PS for real. Instead, we assume the devices could already easily measure different PSs, for instance, some may measure IPIs (time difference between two ECG pulses) while some may measure some other PS. We also assume the devices have the abilities such as generating random numbers, converting the analog signals into digital bit strings, etc.
+### Directory description
 
-#### Our device
+This repository includes two directories:
+1. 'Code run by MSP430 on TI Code Composer Studio': Source code implementations (in plain C) of physiological signal based-fuzzy cryptographic primitives on TI MSP430FR5969 LaunchPad development board. All codes run on TI Code Composer Studio IDE. Note that each Hamming metric method has two versions as 'BCH based' and 'RS based' depending on the underlying ECC applied. Each method comprises two parts: TX and RX. There are multiple parameter choices for each method. All feasible parameters have been defined as macros at the top of each 'main.c' file.
 
-We use TI MSP430FR5994 launchpad as the simulator device for our experiments. It obtains 16-bit CPU, 8KB SRAM and 128KB FRAM. Besides, it's specified designed for low power computation. We think this device is suitable to simulate the hardware used in body-area (or specifically, medical devices).
-
-#### For algorithms
-1. The target of each method is the same: distribute a secure 128-bit key on both devices.
-2. All methods chosen must be secure in IMD&programmer scenrio and well accepted by security communities.
-3. All the methods implemented should provide similar level of security. Different requirements on initial PS entropy might be applied on different methods. 
-3. Because we don't focus on the detailed PS choosing or Analog-digital-converting processes, we assume all the PS data has been uniformly distributed random as the algorithm inputs, for convenience of implementation. However, we want to mention that extracted PS data itself doesn't have to be uniformly distributed random originally in these methods (apart from fuzzy commitment).
-4. All these methods could work whenever the PS measurements on both devices are 'similar enough'. However, different PS may has different mismatch rate naturally. Therefore, we apply different mismatch rates on the PS measurements inputs, so that the results show the performances of these methods on different kinds of PS. For example, fuzzy commitment might work well when mismatch rate is less than 5%, but perform bad when mismatch rate increases. Three thresholds are set: 2%, 5%, 10%. 
-
-### Methods Chosen
-
-These methods have been well accepted by the security community:
-1. Based on PS in binary format
-- fuzzy commitment
-- fuzzy extractor: code-offset construction 
-- fuzzy extractor: syndrome construction
-2. Based on PS in set format (for example, use IPI time as set element directly)
-- fuzzy vault
-- fuzzy extractor: improved J-S fuzzy vault
-- fuzzy extractor: PinSketch
-
-Most of these methods are based on ECC (Error-correction Codes). The ECC used:
-1. binary BCH code
-2. Reed-Solomon code
-
-Note: Because many methods rely on ECC codes, it'll also be a research area to test which ECC settings perform better. For example, different ECC types may have different effects, such as: RS works well in burst error naturally. Besides, larger block size may result in more memory consumption, but may require less energy consumption. The choice of different block sizes may affect. 
-
-
-
-### Source code description
-
-
-This directory includes two parts:
-1. Source code implementations (in plain C) of physiological signal based-fuzzy cryptographic primitives on TI MSP430FR5969 LaunchPad development board. All codes run on TI Code Composer Studio IDE. The fuzzy primitives are divided into Hamming metric and set metric methods. Note each Hamming metric method has two versions as 'BCH based' and 'RS based' depending on the underlying Error Correction Code applied. Each method comprises two parts: TX and RX. There are multiple parameter choices for each method. All feasible parameters have been defined as macros at the top of each 'main.c' file.
-
-2. Codes that test whether a program running on MSP430FR5969 is constant-time.
+2. 'Timing-leakage test': Codes that test whether a program running on MSP430FR5969 is constant-time.
 
 
 
