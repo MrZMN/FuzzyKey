@@ -26,7 +26,7 @@ Many algorithm are based on ECC (Error-correction Code) including:
 1. Binary Bose-Chaudhuri-Hocquenghem (BCH) code
 2. Reed-Solomon (RS) code
 
+### Acknowledgement
 
-
-
+We partially refer to Simon Rockliff's implementation of RS code (cf. http://www.eccpage.com/rs.c, 1989) for our decoding methods. We thank Simon for his work, and acknowledge him in the comments of relevant programs as required.
 
